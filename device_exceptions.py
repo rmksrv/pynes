@@ -1,0 +1,2 @@
+class NotConnectedToBusException(Exception):
+    pass

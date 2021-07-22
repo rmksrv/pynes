@@ -1,32 +1,19 @@
-from ctypes import c_ubyte, c_uint
+from ctypes import c_uint8, c_uint16
 
-from cpu6502 import CPU6502, CPU6502Opcodes
-from memory import Memory
 
+from bus import Bus
+from cpu6502 import Cpu6502
+from ram import Ram
 
 if __name__ == '__main__':
-    # init devices
-    cpu = CPU6502()
-    mem = Memory()
-    cpu.reset()
-    print(cpu)
+    test_cpu = Cpu6502()
+    test_ram = Ram()
+    test_bus = Bus()
 
-    # hardcoding test program (JSR)
-    mem.write_byte(0xFFFC, c_ubyte(CPU6502Opcodes.JSR.value))
-    mem.write_byte(0xFFFD, c_ubyte(0x42))
-    mem.write_byte(0xFFFE, c_ubyte(0x42))
-    mem.write_byte(0x4242, c_ubyte(CPU6502Opcodes.LDA_IM.value))
-    mem.write_byte(0x4243, c_ubyte(0x84))
+    print(test_bus)
+    test_cpu.connect_to_bus(test_bus)
+    test_ram.connect_to_bus(test_bus)
+    print(test_bus)
 
-    # hardcoding test program (LDA_IM)
-    # mem.write_byte(0xFFFC, c_ubyte(CPU6502Opcodes.LDA_IM.value))
-    # mem.write_byte(0xFFFD, c_ubyte(0x42))
-
-    # hardcoding test program (LDA_ZP)
-    # mem.write(0xFFFC, c_ubyte(CPU6502Opcodes.LDA_ZP))
-    # mem.write(0xFFFD, c_ubyte(0x42))
-    # mem.write(0x0042, c_ubyte(0x84))
-
-    # executing
-    cpu.exec(mem, c_uint(9))
-    print(cpu)
+    foo = test_cpu.read_from_ram(c_uint16(0x0000))
+    print(foo)
