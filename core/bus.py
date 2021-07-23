@@ -1,16 +1,6 @@
-from abc import ABC
 from typing import Optional
 
-
-class FakeDevice(ABC):
-    """
-    tl;dr: FakeDevice == Device
-    Duplicating class for device.Device. Need this one to avoid circular imports:
-        main.py -> import Bus -> import Device -> import Bus -> ...
-    We could really just don't use it, but with this we keep type declarations inside Bus class
-    """
-    NAME_DEVICE_RAM     = 'Ram'
-    NAME_DEVICE_CPU6502 = 'Cpu6502'
+from core.device.fake_device import FakeDevice
 
 
 class Bus:

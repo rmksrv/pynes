@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Optional
 
-from bus import Bus
+from core.bus import Bus
 
 
 class Device(ABC):
