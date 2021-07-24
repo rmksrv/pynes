@@ -15,7 +15,7 @@ class Ram(Device):
 
     def write(self, addr: c_uint16, data: c_uint8) -> None:
         if Ram.is_addr_valid(addr):
-            self.data[addr.value] = data
+            self.data[addr.value].value = data.value
 
     def read(self, addr: c_uint16, read_only: c_bool = c_bool(False)) -> c_uint8:
         if Ram.is_addr_valid(addr):

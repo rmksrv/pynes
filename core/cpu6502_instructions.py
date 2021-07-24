@@ -50,8 +50,8 @@ class AND(Cpu6502Instruction):
     def operate(self) -> c_uint8:
         self.cpu.fetch()
         self.cpu.a.value &= self.cpu.fetched.value
-        self.cpu.z.value = self.cpu.a.value == 0x00
-        self.cpu.n.value = self.cpu.a.value == 0x80
+        self.cpu.z.value = (self.cpu.a.value == 0x00)
+        self.cpu.n.value = (self.cpu.a.value & 0x80)
         return c_uint8(1)
 
     @staticmethod

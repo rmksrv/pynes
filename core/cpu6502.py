@@ -9,29 +9,29 @@ from core.device.exceptions import NotConnectedToBusException
 
 class Cpu6502(Device):
 
-    INIT_VALUE_PC:     c_uint16 = c_uint16(0x0000)
-    INIT_VALUE_SP:     c_uint8  = c_uint8(0x00)
-    INIT_VALUE_REG:    c_uint8  = c_uint8(0x00)
-    INIT_VALUE_STATUS: c_bool   = c_bool(False)
+    INIT_VALUE_PC:     int  = 0x0000
+    INIT_VALUE_SP:     int  = 0x00
+    INIT_VALUE_REG:    int  = 0x00
+    INIT_VALUE_STATUS: bool = False
 
     def __init__(self):
         super().__init__()
         # 6502 INTERNALS BEGIN
-        self.pc = Cpu6502.INIT_VALUE_PC  # program counter
-        self.sp = Cpu6502.INIT_VALUE_SP  # stack pointer
+        self.pc = c_uint16(Cpu6502.INIT_VALUE_PC)  # program counter
+        self.sp = c_uint8(Cpu6502.INIT_VALUE_SP)  # stack pointer
         # registers
-        self.a = Cpu6502.INIT_VALUE_REG  # accumulator
-        self.x = Cpu6502.INIT_VALUE_REG
-        self.y = Cpu6502.INIT_VALUE_REG
+        self.a = c_uint8(Cpu6502.INIT_VALUE_REG)  # accumulator
+        self.x = c_uint8(Cpu6502.INIT_VALUE_REG)
+        self.y = c_uint8(Cpu6502.INIT_VALUE_REG)
         # status flags
-        self.c = Cpu6502.INIT_VALUE_STATUS  # carry flag
-        self.z = Cpu6502.INIT_VALUE_STATUS  # zero
-        self.i = Cpu6502.INIT_VALUE_STATUS  # disable interrupts
-        self.d = Cpu6502.INIT_VALUE_STATUS  # decimal mode
-        self.b = Cpu6502.INIT_VALUE_STATUS  # break
-        self.u = Cpu6502.INIT_VALUE_STATUS  # unused
-        self.v = Cpu6502.INIT_VALUE_STATUS  # overflow
-        self.n = Cpu6502.INIT_VALUE_STATUS  # negative
+        self.c = c_bool(Cpu6502.INIT_VALUE_STATUS)  # carry flag
+        self.z = c_bool(Cpu6502.INIT_VALUE_STATUS)  # zero
+        self.i = c_bool(Cpu6502.INIT_VALUE_STATUS)  # disable interrupts
+        self.d = c_bool(Cpu6502.INIT_VALUE_STATUS)  # decimal mode
+        self.b = c_bool(Cpu6502.INIT_VALUE_STATUS)  # break
+        self.u = c_bool(Cpu6502.INIT_VALUE_STATUS)  # unused
+        self.v = c_bool(Cpu6502.INIT_VALUE_STATUS)  # overflow
+        self.n = c_bool(Cpu6502.INIT_VALUE_STATUS)  # negative
         # 6502 INTERNALS END
         self.fetched = c_uint8(0x00)
         self.addr_abs = c_uint16(0x0000)
