@@ -30,7 +30,8 @@ jobs:
         
     - name: Pass root dir to PYTHONPATH
       run: |
-        export PYTHONPATH=$PYTHONPATH:$PWD
+#        export PYTHONPATH=$PYTHONPATH:$PWD
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD
         echo
         echo $PYTHONPATH
         echo
