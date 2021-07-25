@@ -1,6 +1,6 @@
 from ctypes import c_uint8, c_uint16
 
-from core.device.fake_device import FakeDevice
+from pynes.core.device.fake_device import FakeDevice
 
 ADDR_MODE_EXIT_SUCCESS:        c_uint8 = c_uint8(0)
 ADDR_MODE_EXIT_ADD_CYCLE_NEED: c_uint8 = c_uint8(0)

@@ -1,6 +1,6 @@
 from ctypes import c_uint8, c_uint16, c_bool
 
-from core.device.device import Device
+from pynes.core.device.device import Device
 
 
 class Ram(Device):

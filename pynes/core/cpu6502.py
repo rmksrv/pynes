@@ -1,10 +1,10 @@
 from ctypes import c_uint8, c_uint16, c_bool
 from typing import Dict
 
-import core.cpu6502_addr_modes as ams
-from core.cpu6502_instructions import Cpu6502Instruction
-from core.device.device import Device
-from core.device.exceptions import NotConnectedToBusException
+import pynes.core.cpu6502_addr_modes as ams
+from pynes.core.cpu6502_instructions import Cpu6502Instruction
+from pynes.core.device.device import Device
+from pynes.core.device.exceptions import NotConnectedToBusException
 
 
 class Cpu6502(Device):

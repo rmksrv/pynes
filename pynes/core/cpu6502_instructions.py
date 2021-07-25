@@ -3,8 +3,8 @@ from ctypes import c_uint8
 from dataclasses import dataclass
 from typing import Callable, Dict
 
-import core.cpu6502_addr_modes as ams
-from core.device.fake_device import FakeDevice
+import pynes.core.cpu6502_addr_modes as ams
+from pynes.core.device.fake_device import FakeDevice
 
 
 # instruction template

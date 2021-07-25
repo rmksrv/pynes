@@ -1,6 +1,6 @@
 from typing import Optional
 
-from core.device.fake_device import FakeDevice
+from pynes.core.device.fake_device import FakeDevice
 
 
 class Bus:

@@ -1,6 +1,6 @@
-from core.bus import Bus
-from core.cpu6502 import Cpu6502
-from core.ram import Ram
+from pynes.core.bus import Bus
+from pynes.core.cpu6502 import Cpu6502
+from pynes.core.ram import Ram
 
 if __name__ == '__main__':
     test_cpu = Cpu6502()
