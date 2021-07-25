@@ -30,9 +30,8 @@ jobs:
         
     - name: Pass root dir to PYTHONPATH
       run: |
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD
-        printenv
-        
+        echo "/home/runner/work/pynes/pynes" >> $GITHUB_PATH
+
     #- name: Lint with flake8
     #  run: |
     #    # stop the build if there are Python syntax errors or undefined names
