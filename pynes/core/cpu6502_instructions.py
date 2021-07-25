@@ -7,6 +7,8 @@ import pynes.core.cpu6502_addr_modes as ams
 from pynes.core.device.fake_device import FakeDevice
 
 
+# http://www.obelisk.me.uk/6502/reference.html was used as instructions reference
+
 # instruction template
 @dataclass
 class Cpu6502Instruction(ABC):
@@ -47,6 +49,9 @@ class ADC(Cpu6502Instruction):
 
 
 class AND(Cpu6502Instruction):
+    """
+    Logical AND: performed bit by bit on acc value with fetched from memory byte
+    """
     def operate(self) -> c_uint8:
         self.cpu.fetch()
         self.cpu.a.value &= self.cpu.fetched.value
@@ -84,8 +89,20 @@ class ASL(Cpu6502Instruction):
 
 
 class BCC(Cpu6502Instruction):
+    """
+    Branch if Carry Clear: if C not set then add relative address to PC to cause a branch to new location
+    """
     def operate(self):
-        pass
+        if not self.cpu.c.value:
+            self.cpu.cycles.value += 1
+            self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
+
+            cross_page_bound = (self.cpu.addr_abs.value & 0xff00) != (self.cpu.pc.value & 0xff00)
+            if cross_page_bound:
+                self.cpu.cycles.value += 1
+
+            self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -95,24 +112,49 @@ class BCC(Cpu6502Instruction):
 
 
 class BCS(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Branch if Carry Set: if C set then add relative address to PC to cause a branch to new location
+    """
+    def operate(self) -> c_uint8:
+        if self.cpu.c.value:
+            self.cpu.cycles.value += 1
+            self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
+
+            cross_page_bound = (self.cpu.addr_abs.value & 0xff00) != (self.cpu.pc.value & 0xff00)
+            if cross_page_bound:
+                self.cpu.cycles.value += 1
+
+            self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
         return {
-            0xb0: BCC(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
+            0xb0: BCS(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
 
 
 class BEQ(Cpu6502Instruction):
+    """
+    Branch if Equal: If the zero flag is set then add the relative displacement
+    to the program counter to cause a branch to a new location.
+    """
     def operate(self):
-        pass
+        if self.cpu.z.value:
+            self.cpu.cycles.value += 1
+            self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
+
+            cross_page_bound = (self.cpu.addr_abs.value & 0xff00) != (self.cpu.pc.value & 0xff00)
+            if cross_page_bound:
+                self.cpu.cycles.value += 1
+
+            self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
         return {
-            0xf0: BCC(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
+            0xf0: BEQ(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
 
 
@@ -129,8 +171,21 @@ class BIT(Cpu6502Instruction):
 
 
 class BMI(Cpu6502Instruction):
+    """
+    Branch if Minus: If the negative flag is set then add the relative displacement
+    to the program counter to cause a branch to a new location.
+    """
     def operate(self):
-        pass
+        if self.cpu.n.value:
+            self.cpu.cycles.value += 1
+            self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
+
+            cross_page_bound = (self.cpu.addr_abs.value & 0xff00) != (self.cpu.pc.value & 0xff00)
+            if cross_page_bound:
+                self.cpu.cycles.value += 1
+
+            self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -140,8 +195,21 @@ class BMI(Cpu6502Instruction):
 
 
 class BNE(Cpu6502Instruction):
+    """
+    Branch if Not Equal: If the zero flag is clear then add the relative displacement
+    to the program counter to cause a branch to a new location.
+    """
     def operate(self):
-        pass
+        if not self.cpu.z.value:
+            self.cpu.cycles.value += 1
+            self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
+
+            cross_page_bound = (self.cpu.addr_abs.value & 0xff00) != (self.cpu.pc.value & 0xff00)
+            if cross_page_bound:
+                self.cpu.cycles.value += 1
+
+            self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -151,8 +219,21 @@ class BNE(Cpu6502Instruction):
 
 
 class BPL(Cpu6502Instruction):
+    """
+    Branch if Positive: If the negative flag is clear then add the relative displacement
+    to the program counter to cause a branch to a new location.
+    """
     def operate(self):
-        pass
+        if not self.cpu.n.value:
+            self.cpu.cycles.value += 1
+            self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
+
+            cross_page_bound = (self.cpu.addr_abs.value & 0xff00) != (self.cpu.pc.value & 0xff00)
+            if cross_page_bound:
+                self.cpu.cycles.value += 1
+
+            self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -173,8 +254,21 @@ class BRK(Cpu6502Instruction):
 
 
 class BVC(Cpu6502Instruction):
+    """
+    Branch if Overflow Clear: If the overflow flag is clear then add the relative displacement
+    to the program counter to cause a branch to a new location.
+    """
     def operate(self):
-        pass
+        if not self.cpu.v.value:
+            self.cpu.cycles.value += 1
+            self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
+
+            cross_page_bound = (self.cpu.addr_abs.value & 0xff00) != (self.cpu.pc.value & 0xff00)
+            if cross_page_bound:
+                self.cpu.cycles.value += 1
+
+            self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -184,8 +278,21 @@ class BVC(Cpu6502Instruction):
 
 
 class BVS(Cpu6502Instruction):
+    """
+    Branch if Overflow Set: If the overflow flag is set then add the relative displacement
+    to the program counter to cause a branch to a new location.
+    """
     def operate(self):
-        pass
+        if self.cpu.v.value:
+            self.cpu.cycles.value += 1
+            self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
+
+            cross_page_bound = (self.cpu.addr_abs.value & 0xff00) != (self.cpu.pc.value & 0xff00)
+            if cross_page_bound:
+                self.cpu.cycles.value += 1
+
+            self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:

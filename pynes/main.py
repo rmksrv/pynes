@@ -10,10 +10,10 @@ if __name__ == '__main__':
     test_cpu.connect_to_bus(test_bus)
     test_ram.connect_to_bus(test_bus)
 
-    print(f"z: {test_cpu.z.value}")
+    print("Created test Bus:")
+    print(test_bus)
 
-    test_instr = test_cpu.lookup.get(0x29)
-    test_instr.operate()
-    print("AND was operated...")
-
-    print(f"z: {test_cpu.z.value}")
+    test_cpu.c.value = True
+    op = test_cpu.lookup.get(0xb0)
+    print(op)
+    res = op.operate()
