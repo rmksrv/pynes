@@ -31,7 +31,10 @@ jobs:
     - name: Pass root dir to PYTHONPATH
       run: |
         export PYTHONPATH=$PYTHONPATH:$PWD
+        echo
         echo $PYTHONPATH
+        echo
+        printenv
         
     #- name: Lint with flake8
     #  run: |
