@@ -30,7 +30,7 @@ jobs:
         
     - name: Pass root dir to PYTHONPATH
       run: |
-        echo "PYTHONPATH=pynes" >> $GITHUB_ENV
+        echo "::set-env name=PYTHONPATH::home/runner/work/pynes/pynes"
         printenv
 
     #- name: Lint with flake8
