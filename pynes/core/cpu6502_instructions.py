@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ctypes import c_uint8
+from ctypes import c_uint8, c_uint16
 from dataclasses import dataclass
 from typing import Callable, Dict
 
@@ -31,8 +31,27 @@ class Cpu6502Instruction(ABC):
 
 
 class ADC(Cpu6502Instruction):
+    """
+    Add with Carry: This instruction adds the contents of a memory location to
+    the accumulator together with the carry bit. If overflow occurs the carry bit
+    is set, this enables multiple byte addition to be performed.
+    """
     def operate(self) -> c_uint8:
-        pass
+        self.cpu.fetch()
+        tmp = c_uint16(self.cpu.a.value + self.cpu.fetched.value + int(self.cpu.c.value))
+
+        self.cpu.c.value = tmp.value > 0xff
+        self.cpu.z.value = (tmp.value & 0x00ff) == 0
+        self.cpu.n.value = bool(tmp.value & 0x80)
+        self.cpu.v.value = bool(
+            (
+                    ~(self.cpu.a.value ^ self.cpu.fetched.value) &
+                    (self.cpu.a.value ^ tmp.value)
+            ) & 0x0080
+        )
+
+        self.cpu.a.value = tmp.value & 0x00ff
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -56,7 +75,7 @@ class AND(Cpu6502Instruction):
         self.cpu.fetch()
         self.cpu.a.value &= self.cpu.fetched.value
         self.cpu.z.value = (self.cpu.a.value == 0x00)
-        self.cpu.n.value = (self.cpu.a.value & 0x80)
+        self.cpu.n.value = bool(self.cpu.a.value & 0x80)
         return c_uint8(1)
 
     @staticmethod
@@ -612,8 +631,13 @@ class ORA(Cpu6502Instruction):
 
 
 class PHA(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Push Accumulator: Pushes a copy of the accumulator on to the stack.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.write(c_uint16(0x0100 + self.cpu.sp.value), self.cpu.a)
+        self.cpu.sp.value -= 1
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -634,8 +658,16 @@ class PHP(Cpu6502Instruction):
 
 
 class PLA(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Pull Accumulator: Pulls an 8 bit value from the stack and into the accumulator.
+    The zero and negative flags are set as appropriate.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.sp.value += 1
+        self.cpu.a.value = self.cpu.read(c_uint16(0x0100 + self.cpu.sp.value)).value
+        self.cpu.z.value = self.cpu.a.value == 0x00
+        self.cpu.n.value = bool(self.cpu.a.value & 0x80)
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -708,8 +740,28 @@ class RTS(Cpu6502Instruction):
 
 
 class SBC(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Subtract with Carry: This instruction subtracts the contents of a memory location
+    to the accumulator together with the not of the carry bit. If overflow occurs the
+    carry bit is clear, this enables multiple byte subtraction to be performed.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        value = c_uint16(self.cpu.fetched.value ^ 0x00ff)
+        tmp = c_uint16(self.cpu.a.value + self.cpu.fetched.value + int(self.cpu.c.value))
+
+        self.cpu.c.value = tmp.value > 0xff
+        self.cpu.z.value = (tmp.value & 0x00ff) == 0
+        self.cpu.n.value = bool(tmp.value & 0x80)
+        self.cpu.v.value = bool(
+            (
+                    ~(self.cpu.a.value ^ self.cpu.fetched.value) &
+                    (self.cpu.a.value ^ tmp.value)
+            ) & 0x0080
+        )
+
+        self.cpu.a.value = tmp.value & 0x00ff
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:

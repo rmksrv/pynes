@@ -21,6 +21,13 @@ def cpu(bus: Bus):
     yield bus.get_cpu6502()
 
 
+# TESTS
+
+def test_adc(cpu: Cpu6502):
+    # TODO create tests for ADC/SBC
+    pass
+
+
 @pytest.mark.parametrize('init_data_value, init_a_value, exp_a_value, exp_z_value, exp_n_value',
                          [
                              (0x00, 0x00, 0x00, True, False),
@@ -235,6 +242,47 @@ def test_clv(cpu: Cpu6502, init_v_value: int):
 
     assert res.value == 0
     assert not cpu.v.value
+
+
+@pytest.mark.parametrize('init_sp_value, init_a_value',
+                         [
+                             (0x10, 0xFF),
+                             (0x00, 0xF0),
+                             (0xFF, 0x0F),
+                         ])
+def test_pha(cpu: Cpu6502, init_sp_value: int, init_a_value: int):
+    # cpu init state
+    cpu.sp.value = init_sp_value
+    cpu.a.value = init_a_value
+
+    res = cpu.lookup.get(0x48).operate()
+
+    assert res.value == 0
+    assert cpu.sp.value == c_uint8(init_sp_value - 1).value
+    assert cpu.read(c_uint16(0x0100 + init_sp_value)).value == init_a_value
+
+
+@pytest.mark.parametrize('init_sp_value, init_data',
+                         [
+                             (0x10, 0xFF),
+                             (0x00, 0xF0),
+                             (0xFF, 0x0F),
+                         ])
+def test_pla(cpu: Cpu6502, init_sp_value: int, init_data: int):
+    # cpu init state
+    cpu.sp.value = init_sp_value
+    cpu.write(c_uint16(0x0100 + init_sp_value), c_uint8(init_data))
+
+    res = cpu.lookup.get(0x68).operate()
+
+    assert res.value == 0
+    assert cpu.sp.value == c_uint8(init_sp_value + 1).value
+    assert cpu.a.value == c_uint8(init_data).value
+
+
+def test_sbc(cpu: Cpu6502):
+    # TODO create tests for ADC/SBC
+    pass
 
 
 @pytest.mark.parametrize('init_c_value', [True, False])
