@@ -191,3 +191,80 @@ def test_bvs(cpu: Cpu6502, init_v_value: bool, init_addr_rel_value: int,
     assert res.value == 0
     assert cpu.pc.value == exp_pc_value
     assert cpu.cycles.value == exp_cycles_value
+
+
+@pytest.mark.parametrize('init_c_value', [True, False])
+def test_clc(cpu: Cpu6502, init_c_value: int):
+    # cpu init state
+    cpu.c.value = init_c_value
+
+    res = cpu.lookup.get(0x18).operate()
+
+    assert res.value == 0
+    assert not cpu.c.value
+
+
+@pytest.mark.parametrize('init_d_value', [True, False])
+def test_cld(cpu: Cpu6502, init_d_value: int):
+    # cpu init state
+    cpu.d.value = init_d_value
+
+    res = cpu.lookup.get(0xd8).operate()
+
+    assert res.value == 0
+    assert not cpu.d.value
+
+
+@pytest.mark.parametrize('init_i_value', [True, False])
+def test_cli(cpu: Cpu6502, init_i_value: int):
+    # cpu init state
+    cpu.i.value = init_i_value
+
+    res = cpu.lookup.get(0x58).operate()
+
+    assert res.value == 0
+    assert not cpu.i.value
+
+
+@pytest.mark.parametrize('init_v_value', [True, False])
+def test_clv(cpu: Cpu6502, init_v_value: int):
+    # cpu init state
+    cpu.v.value = init_v_value
+
+    res = cpu.lookup.get(0xb8).operate()
+
+    assert res.value == 0
+    assert not cpu.v.value
+
+
+@pytest.mark.parametrize('init_c_value', [True, False])
+def test_sec(cpu: Cpu6502, init_c_value: int):
+    # cpu init state
+    cpu.c.value = init_c_value
+
+    res = cpu.lookup.get(0x38).operate()
+
+    assert res.value == 0
+    assert cpu.c.value
+
+
+@pytest.mark.parametrize('init_d_value', [True, False])
+def test_sed(cpu: Cpu6502, init_d_value: int):
+    # cpu init state
+    cpu.d.value = init_d_value
+
+    res = cpu.lookup.get(0xf8).operate()
+
+    assert res.value == 0
+    assert cpu.d.value
+
+
+@pytest.mark.parametrize('init_i_value', [True, False])
+def test_sei(cpu: Cpu6502, init_i_value: int):
+    # cpu init state
+    cpu.i.value = init_i_value
+
+    res = cpu.lookup.get(0x78).operate()
+
+    assert res.value == 0
+    assert cpu.i.value

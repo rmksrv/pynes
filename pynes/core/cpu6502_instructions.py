@@ -92,7 +92,7 @@ class BCC(Cpu6502Instruction):
     """
     Branch if Carry Clear: if C not set then add relative address to PC to cause a branch to new location
     """
-    def operate(self):
+    def operate(self) -> c_uint8:
         if not self.cpu.c.value:
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
@@ -139,7 +139,7 @@ class BEQ(Cpu6502Instruction):
     Branch if Equal: If the zero flag is set then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
-    def operate(self):
+    def operate(self) -> c_uint8:
         if self.cpu.z.value:
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
@@ -175,7 +175,7 @@ class BMI(Cpu6502Instruction):
     Branch if Minus: If the negative flag is set then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
-    def operate(self):
+    def operate(self) -> c_uint8:
         if self.cpu.n.value:
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
@@ -199,7 +199,7 @@ class BNE(Cpu6502Instruction):
     Branch if Not Equal: If the zero flag is clear then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
-    def operate(self):
+    def operate(self) -> c_uint8:
         if not self.cpu.z.value:
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
@@ -223,7 +223,7 @@ class BPL(Cpu6502Instruction):
     Branch if Positive: If the negative flag is clear then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
-    def operate(self):
+    def operate(self) -> c_uint8:
         if not self.cpu.n.value:
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
@@ -258,7 +258,7 @@ class BVC(Cpu6502Instruction):
     Branch if Overflow Clear: If the overflow flag is clear then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
-    def operate(self):
+    def operate(self) -> c_uint8:
         if not self.cpu.v.value:
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
@@ -282,7 +282,7 @@ class BVS(Cpu6502Instruction):
     Branch if Overflow Set: If the overflow flag is set then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
-    def operate(self):
+    def operate(self) -> c_uint8:
         if self.cpu.v.value:
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
@@ -302,8 +302,12 @@ class BVS(Cpu6502Instruction):
 
 
 class CLC(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Clear Carry Flag: Set the carry flag to zero.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.c.value = False
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -313,8 +317,12 @@ class CLC(Cpu6502Instruction):
 
 
 class CLD(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Clear Decimal Mode: Sets the decimal mode flag to zero.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.d.value = False
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -324,8 +332,13 @@ class CLD(Cpu6502Instruction):
 
 
 class CLI(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Clear Interrupt Disable: Clears the interrupt disable flag allowing normal
+    interrupt requests to be serviced.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.i.value = False
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -335,8 +348,12 @@ class CLI(Cpu6502Instruction):
 
 
 class CLV(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Clear Overflow Flag: Clears the overflow flag.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.v.value = False
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -709,8 +726,12 @@ class SBC(Cpu6502Instruction):
 
 
 class SEC(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Set Carry Flag: Set the carry flag to one.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.c.value = True
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -720,8 +741,12 @@ class SEC(Cpu6502Instruction):
 
 
 class SED(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Set Decimal Flag: Set the decimal mode flag to one.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.d.value = True
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -731,8 +756,12 @@ class SED(Cpu6502Instruction):
 
 
 class SEI(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Set Interrupt Disable: Set the interrupt disable flag to one.
+    """
+    def operate(self) -> c_uint8:
+        self.cpu.i.value = True
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
