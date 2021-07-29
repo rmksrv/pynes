@@ -38,17 +38,17 @@ class ADC(Cpu6502Instruction):
     """
     def operate(self) -> c_uint8:
         self.cpu.fetch()
-        tmp = c_uint16(self.cpu.a.value + self.cpu.fetched.value + int(self.cpu.c.value))
+        tmp = c_uint16(self.cpu.a.value + self.cpu.fetched.value + int(self.cpu.get_flag('c')))
 
-        self.cpu.c.value = tmp.value > 0xff
-        self.cpu.z.value = (tmp.value & 0x00ff) == 0
-        self.cpu.n.value = bool(tmp.value & 0x80)
-        self.cpu.v.value = bool(
+        self.cpu.set_flag('c', tmp.value > 0xff)
+        self.cpu.set_flag('z', (tmp.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(tmp.value & 0x80))
+        self.cpu.set_flag('v', bool(
             (
                     ~(self.cpu.a.value ^ self.cpu.fetched.value) &
-                    (self.cpu.a.value ^ tmp.value)
+                     (self.cpu.a.value ^ tmp.value)
             ) & 0x0080
-        )
+        ))
 
         self.cpu.a.value = tmp.value & 0x00ff
         return c_uint8(1)
@@ -74,8 +74,9 @@ class AND(Cpu6502Instruction):
     def operate(self) -> c_uint8:
         self.cpu.fetch()
         self.cpu.a.value &= self.cpu.fetched.value
-        self.cpu.z.value = (self.cpu.a.value == 0x00)
-        self.cpu.n.value = bool(self.cpu.a.value & 0x80)
+
+        self.cpu.set_flag('z', self.cpu.a.value == 0x00)
+        self.cpu.set_flag('n', bool(self.cpu.a.value & 0x80))
         return c_uint8(1)
 
     @staticmethod
@@ -112,7 +113,7 @@ class BCC(Cpu6502Instruction):
     Branch if Carry Clear: if C not set then add relative address to PC to cause a branch to new location
     """
     def operate(self) -> c_uint8:
-        if not self.cpu.c.value:
+        if not self.cpu.get_flag('c'):
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
 
@@ -135,7 +136,7 @@ class BCS(Cpu6502Instruction):
     Branch if Carry Set: if C set then add relative address to PC to cause a branch to new location
     """
     def operate(self) -> c_uint8:
-        if self.cpu.c.value:
+        if self.cpu.get_flag('c'):
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
 
@@ -159,7 +160,7 @@ class BEQ(Cpu6502Instruction):
     to the program counter to cause a branch to a new location.
     """
     def operate(self) -> c_uint8:
-        if self.cpu.z.value:
+        if self.cpu.get_flag('z'):
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
 
@@ -195,7 +196,7 @@ class BMI(Cpu6502Instruction):
     to the program counter to cause a branch to a new location.
     """
     def operate(self) -> c_uint8:
-        if self.cpu.n.value:
+        if self.cpu.get_flag('n'):
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
 
@@ -219,7 +220,7 @@ class BNE(Cpu6502Instruction):
     to the program counter to cause a branch to a new location.
     """
     def operate(self) -> c_uint8:
-        if not self.cpu.z.value:
+        if not self.cpu.get_flag('z'):
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
 
@@ -243,7 +244,7 @@ class BPL(Cpu6502Instruction):
     to the program counter to cause a branch to a new location.
     """
     def operate(self) -> c_uint8:
-        if not self.cpu.n.value:
+        if not self.cpu.get_flag('n'):
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
 
@@ -278,7 +279,7 @@ class BVC(Cpu6502Instruction):
     to the program counter to cause a branch to a new location.
     """
     def operate(self) -> c_uint8:
-        if not self.cpu.v.value:
+        if not self.cpu.get_flag('v'):
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
 
@@ -302,7 +303,7 @@ class BVS(Cpu6502Instruction):
     to the program counter to cause a branch to a new location.
     """
     def operate(self) -> c_uint8:
-        if self.cpu.v.value:
+        if self.cpu.get_flag('v'):
             self.cpu.cycles.value += 1
             self.cpu.addr_abs.value = self.cpu.pc.value + self.cpu.addr_rel.value
 
@@ -325,7 +326,7 @@ class CLC(Cpu6502Instruction):
     Clear Carry Flag: Set the carry flag to zero.
     """
     def operate(self) -> c_uint8:
-        self.cpu.c.value = False
+        self.cpu.set_flag('c', False)
         return c_uint8(0)
 
     @staticmethod
@@ -340,7 +341,7 @@ class CLD(Cpu6502Instruction):
     Clear Decimal Mode: Sets the decimal mode flag to zero.
     """
     def operate(self) -> c_uint8:
-        self.cpu.d.value = False
+        self.cpu.set_flag('d', False)
         return c_uint8(0)
 
     @staticmethod
@@ -356,7 +357,7 @@ class CLI(Cpu6502Instruction):
     interrupt requests to be serviced.
     """
     def operate(self) -> c_uint8:
-        self.cpu.i.value = False
+        self.cpu.set_flag('i', False)
         return c_uint8(0)
 
     @staticmethod
@@ -371,7 +372,7 @@ class CLV(Cpu6502Instruction):
     Clear Overflow Flag: Clears the overflow flag.
     """
     def operate(self) -> c_uint8:
-        self.cpu.v.value = False
+        self.cpu.set_flag('v', False)
         return c_uint8(0)
 
     @staticmethod
@@ -665,8 +666,8 @@ class PLA(Cpu6502Instruction):
     def operate(self) -> c_uint8:
         self.cpu.sp.value += 1
         self.cpu.a.value = self.cpu.read(c_uint16(0x0100 + self.cpu.sp.value)).value
-        self.cpu.z.value = self.cpu.a.value == 0x00
-        self.cpu.n.value = bool(self.cpu.a.value & 0x80)
+        self.cpu.set_flag('z', self.cpu.a.value == 0x00)
+        self.cpu.set_flag('n', bool(self.cpu.a.value & 0x80))
         return c_uint8(0)
 
     @staticmethod
@@ -748,17 +749,17 @@ class SBC(Cpu6502Instruction):
     def operate(self) -> c_uint8:
         self.cpu.fetch()
         value = c_uint16(self.cpu.fetched.value ^ 0x00ff)
-        tmp = c_uint16(self.cpu.a.value + self.cpu.fetched.value + int(self.cpu.c.value))
+        tmp = c_uint16(self.cpu.a.value + self.cpu.fetched.value + int(self.cpu.get_flag('c')))
 
-        self.cpu.c.value = tmp.value > 0xff
-        self.cpu.z.value = (tmp.value & 0x00ff) == 0
-        self.cpu.n.value = bool(tmp.value & 0x80)
-        self.cpu.v.value = bool(
+        self.cpu.set_flag('c', tmp.value > 0xff)
+        self.cpu.set_flag('z', (tmp.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(tmp.value & 0x80))
+        self.cpu.set_flag('v', bool(
             (
                     ~(self.cpu.a.value ^ self.cpu.fetched.value) &
                     (self.cpu.a.value ^ tmp.value)
             ) & 0x0080
-        )
+        ))
 
         self.cpu.a.value = tmp.value & 0x00ff
         return c_uint8(1)
@@ -782,7 +783,8 @@ class SEC(Cpu6502Instruction):
     Set Carry Flag: Set the carry flag to one.
     """
     def operate(self) -> c_uint8:
-        self.cpu.c.value = True
+        # self.cpu.c.value = True
+        self.cpu.set_flag('c', True)
         return c_uint8(0)
 
     @staticmethod
@@ -797,7 +799,7 @@ class SED(Cpu6502Instruction):
     Set Decimal Flag: Set the decimal mode flag to one.
     """
     def operate(self) -> c_uint8:
-        self.cpu.d.value = True
+        self.cpu.set_flag('d', True)
         return c_uint8(0)
 
     @staticmethod
@@ -812,7 +814,7 @@ class SEI(Cpu6502Instruction):
     Set Interrupt Disable: Set the interrupt disable flag to one.
     """
     def operate(self) -> c_uint8:
-        self.cpu.i.value = True
+        self.cpu.set_flag('i', True)
         return c_uint8(0)
 
     @staticmethod

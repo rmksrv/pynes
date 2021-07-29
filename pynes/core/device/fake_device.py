@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from ctypes import c_uint16, c_uint8, c_bool
+from ctypes import c_uint16, c_uint8
 from dataclasses import dataclass
 from typing import Dict, Any
 
@@ -17,14 +17,7 @@ class FakeDevice(ABC):
     a:        c_uint8
     x:        c_uint8
     y:        c_uint8
-    c:        c_bool
-    z:        c_bool
-    i:        c_bool
-    d:        c_bool
-    b:        c_bool
-    u:        c_bool
-    v:        c_bool
-    n:        c_bool
+    status:   c_uint8
     fetched:  c_uint8
     addr_abs: c_uint16
     addr_rel: c_uint16
@@ -45,4 +38,12 @@ class FakeDevice(ABC):
 
     @abstractmethod
     def fetch(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def get_flag(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def set_flag(self, *args, **kwargs):
         pass

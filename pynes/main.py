@@ -13,7 +13,8 @@ if __name__ == '__main__':
     print("Created test Bus:")
     print(test_bus)
 
-    test_cpu.c.value = True
+    # test_cpu.c.value = True
+    test_cpu.set_flag('c', True)
     op = test_cpu.lookup.get(0xb0)
     print(op)
     res = op.operate()
