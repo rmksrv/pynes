@@ -78,8 +78,6 @@ class Cpu6502(Device):
         self.cycles.value -= 1
 
     def irq(self) -> None:
-        # if self.i.value:
-        #     return
         if self.get_flag('i'):
             return
         self.write(c_uint16(0x0100 + self.sp.value), c_uint8((self.pc.value >> 8) & 0x00ff))
@@ -90,8 +88,16 @@ class Cpu6502(Device):
         self.set_flag('b', False)
         self.set_flag('u', True)
         self.set_flag('i', True)
+        self.write(c_uint16(0x0100 + self.sp.value), self.status)
+        self.sp.value -= 1
 
-        self.write(c_uint16(0x0100 + self.sp.value), c_uint8(self.pc.value & 0x00ff))
+        self.addr_abs.value = 0xfffc
+        lo = self.read(c_uint16(self.addr_abs.value + 0))
+        hi = self.read(c_uint16(self.addr_abs.value + 1))
+        self.pc.value = (hi.value << 8) | lo.value
+
+        self.cycles.value = 7
+
 
     def nmi(self) -> None:
         pass
