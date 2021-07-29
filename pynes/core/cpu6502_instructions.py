@@ -44,10 +44,7 @@ class ADC(Cpu6502Instruction):
         self.cpu.set_flag('z', (tmp.value & 0xff) == 0)
         self.cpu.set_flag('n', bool(tmp.value & 0x80))
         self.cpu.set_flag('v', bool(
-            (
-                    ~(self.cpu.a.value ^ self.cpu.fetched.value) &
-                     (self.cpu.a.value ^ tmp.value)
-            ) & 0x0080
+            (~(self.cpu.a.value ^ self.cpu.fetched.value) & (self.cpu.a.value ^ tmp.value)) & 0x0080
         ))
 
         self.cpu.a.value = tmp.value & 0x00ff
@@ -749,16 +746,13 @@ class SBC(Cpu6502Instruction):
     def operate(self) -> c_uint8:
         self.cpu.fetch()
         value = c_uint16(self.cpu.fetched.value ^ 0x00ff)
-        tmp = c_uint16(self.cpu.a.value + self.cpu.fetched.value + int(self.cpu.get_flag('c')))
+        tmp = c_uint16(self.cpu.a.value + value.value + int(self.cpu.get_flag('c')))
 
         self.cpu.set_flag('c', tmp.value > 0xff)
         self.cpu.set_flag('z', (tmp.value & 0xff) == 0)
         self.cpu.set_flag('n', bool(tmp.value & 0x80))
         self.cpu.set_flag('v', bool(
-            (
-                    ~(self.cpu.a.value ^ self.cpu.fetched.value) &
-                    (self.cpu.a.value ^ tmp.value)
-            ) & 0x0080
+            (~(self.cpu.a.value ^ self.cpu.fetched.value) & (self.cpu.a.value ^ tmp.value)) & 0x0080
         ))
 
         self.cpu.a.value = tmp.value & 0x00ff

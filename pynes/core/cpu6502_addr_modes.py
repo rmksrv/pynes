@@ -125,10 +125,9 @@ def am_ind(cpu: FakeDevice) -> c_uint8:
     ptr = c_uint16((ptr_hi.value << 8) | ptr_lo.value)
 
     # Page boundary hardware bug else normal behaviour
-    cpu.addr_abs = c_uint16((cpu.read(c_uint16(ptr.value & 0xFF00)).value << 8) |
-                            cpu.read(ptr).value) if ptr_lo.value == 0x00FF \
-        else c_uint16((cpu.read(c_uint16(ptr.value + 1)).value << 8) |
-                      cpu.read(ptr).value)
+    cpu.addr_abs = \
+        c_uint16((cpu.read(c_uint16(ptr.value & 0xFF00)).value << 8) | cpu.read(ptr).value) if ptr_lo.value == 0x00FF \
+        else c_uint16((cpu.read(c_uint16(ptr.value + 1)).value << 8) | cpu.read(ptr).value)
 
     return ADDR_MODE_EXIT_SUCCESS
 

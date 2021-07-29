@@ -8,10 +8,9 @@ from pynes.core.device.exceptions import NotConnectedToBusException
 
 
 class Cpu6502(Device):
-
-    INIT_VALUE_PC:     int  = 0x0000
-    INIT_VALUE_SP:     int  = 0x00
-    INIT_VALUE_REG:    int  = 0x00
+    INIT_VALUE_PC: int = 0x0000
+    INIT_VALUE_SP: int = 0x00
+    INIT_VALUE_REG: int = 0x00
     INIT_VALUE_STATUS: bool = False
 
     def __init__(self):
@@ -97,7 +96,6 @@ class Cpu6502(Device):
         self.pc.value = (hi.value << 8) | lo.value
 
         self.cycles.value = 7
-
 
     def nmi(self) -> None:
         pass
