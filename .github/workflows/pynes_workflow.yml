@@ -41,7 +41,7 @@ jobs:
       run: |
         conda config --set always_yes yes --set changeps1 no
         conda install -q -c conda-forge tox
-        conda create -q -n py36 python=3.7
+        conda create -q -n py36 python=3.6
         conda create -q -n py37 python=3.7
         conda create -q -n py39 python=3.9
     - name: Run pytest

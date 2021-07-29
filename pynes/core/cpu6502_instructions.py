@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from ctypes import c_uint8, c_uint16
-from dataclasses import dataclass
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import pynes.core.cpu6502_addr_modes as ams
 from pynes.core.device.fake_device import FakeDevice
@@ -10,11 +9,13 @@ from pynes.core.device.fake_device import FakeDevice
 # http://www.obelisk.me.uk/6502/reference.html was used as instructions reference
 
 # instruction template
-@dataclass
 class Cpu6502Instruction(ABC):
-    cpu:       FakeDevice
-    cycles:    c_uint8
-    addr_mode: Callable[[], c_uint8]
+
+    def __init__(self, cpu: Optional[FakeDevice], cycles: Optional[c_uint8],
+                 addr_mode: Optional[Callable[[], c_uint8]]):
+        self.cpu = cpu
+        self.cycles = cycles
+        self.addr_mode = addr_mode
 
     @property
     def name(self) -> str:
