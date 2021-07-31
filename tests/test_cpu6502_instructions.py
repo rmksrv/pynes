@@ -25,7 +25,10 @@ def cpu(bus: Bus):
 @pytest.mark.parametrize('init_data_value, init_a_value, init_c_value, '
                          'exp_a_value, exp_c_value, exp_z_value, exp_n_value, exp_v_value',
                          [
-                             (0x00, 0x00, False, 0x00, False, True, False, False),
+                             (0x00, 0x00, False, 0x00, False, True, False, False),  # trivial
+                             (0x00, 0x00, True, 0x01, False, False, False, False),  # trivial + carry
+                             (0x78, 0x32, False, 0xaa, False, False, True, True),  # pos + pos -> neg
+                             (0xee, 0x80, True, 0x6f, True, False, False, True),  # neg + neg -> pos
                          ])
 def test_adc(cpu: Cpu6502, init_data_value: int, init_a_value: int, init_c_value: bool, exp_a_value: int,
              exp_c_value: bool, exp_z_value: bool, exp_n_value: bool, exp_v_value: bool):
@@ -328,10 +331,31 @@ def test_pla(cpu: Cpu6502, init_sp_value: int, init_data: int):
     assert cpu.a.value == c_uint8(init_data).value
 
 
-@pytest.mark.skip
-def test_sbc(cpu: Cpu6502):
-    # TODO create tests for ADC/SBC
-    pass
+@pytest.mark.parametrize('init_data_value, init_a_value, init_c_value, '
+                         'exp_a_value, exp_c_value, exp_z_value, exp_n_value, exp_v_value',
+                         [
+                             (0x00, 0x00, True, 0x00, True, True, False, False),  # trivial
+                             (0x00, 0x00, False, 0xff, False, False, True, True),  # trivial + carry
+                             (0x79, 0x7f, False, 0x05, True, False, False, False),  # pos - pos -> pos
+                             (0x79, 0x7f, True, 0x06, True, False, False, False),  # pos - pos -> pos (with carry)
+                         ])
+def test_sbc(cpu: Cpu6502, init_data_value: int, init_a_value: int, init_c_value: bool, exp_a_value: int,
+             exp_c_value: bool, exp_z_value: bool, exp_n_value: bool, exp_v_value: bool):
+    # cpu init state
+    cpu.write(c_uint16(0x0000), c_uint8(init_data_value))
+    cpu.a.value = init_a_value
+    cpu.set_flag('c', init_c_value)
+
+    op = cpu.lookup.get(0xe9)
+    res = op.operate()
+
+    assert op.name == "SBC"
+    assert res.value == 1
+    assert cpu.a.value == exp_a_value
+    assert cpu.get_flag('c') == exp_c_value
+    assert cpu.get_flag('z') == exp_z_value
+    assert cpu.get_flag('n') == exp_n_value
+    assert cpu.get_flag('v') == exp_v_value
 
 
 @pytest.mark.parametrize('init_c_value', [True, False])
