@@ -326,8 +326,9 @@ class BRK(Cpu6502Instruction):
         self.cpu.sp.value -= 1
         self.cpu.set_flag('b', False)
 
-        self.cpu.pc.value = c_uint16(self.cpu.read(c_uint16(0xfffe)).value |
-                                     (self.cpu.read(c_uint16(0xffff)).value << 8))
+        self.cpu.pc.value = c_uint16(
+            self.cpu.read(c_uint16(0xfffe)).value | (self.cpu.read(c_uint16(0xffff)).value << 8)
+        )
         return c_uint8(0)
 
     @staticmethod
@@ -964,8 +965,27 @@ class PLP(Cpu6502Instruction):
 
 
 class ROL(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Rotate Left: Move each of the bits in either A or M one place to the left.
+    Bit 0 is filled with the current value of the carry flag whilst the old bit 7
+    becomes the new carry flag value.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        tmp = c_uint16((self.cpu.fetched.value << 1) | self.cpu.get_flag('c'))
+
+        self.cpu.set_flag('c', tmp.value & 0xff00)
+        self.cpu.set_flag('z', (tmp.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(tmp.value & 0x80))
+
+        result = c_uint8(tmp.value & 0x00ff)
+        if self.cpu.lookup[self.cpu.opcode.value].addr_mode == ams.am_imp:
+            self.cpu.a.value = result.value
+        else:
+            self.cpu.write(self.cpu.addr_abs, result)
+
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -979,8 +999,26 @@ class ROL(Cpu6502Instruction):
 
 
 class ROR(Cpu6502Instruction):
+    """
+    Rotate Right: Move each of the bits in either A or M one place to the right. Bit 7
+    is filled with the current value of the carry flag whilst the old bit 0 becomes the
+    new carry flag value.
+    """
     def operate(self):
-        pass
+        self.cpu.fetch()
+        tmp = c_uint16((self.cpu.get_flag('c') << 7) | (self.cpu.fetched.value >> 1))
+
+        self.cpu.set_flag('c', self.cpu.fetched.value & 0x01)
+        self.cpu.set_flag('z', (tmp.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(tmp.value & 0x80))
+
+        result = c_uint8(tmp.value & 0x00ff)
+        if self.cpu.lookup[self.cpu.opcode.value].addr_mode == ams.am_imp:
+            self.cpu.a.value = result.value
+        else:
+            self.cpu.write(self.cpu.addr_abs, result)
+
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
