@@ -20,7 +20,7 @@ class Ram(Device):
     def read(self, addr: c_uint16, read_only: c_bool = c_bool(False)) -> c_uint8:
         if Ram.is_addr_valid(addr):
             return self.data[addr.value]
-        return Ram.INIT_VALUE
+        return c_uint8(Ram.INIT_VALUE)
 
     @staticmethod
     def is_addr_valid(addr: c_uint16) -> bool:
