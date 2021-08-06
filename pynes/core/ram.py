@@ -1,4 +1,4 @@
-from ctypes import c_uint8, c_uint16, c_bool
+from ctypes import c_uint8, c_uint16
 
 from pynes.core.device.device import Device
 
@@ -17,7 +17,7 @@ class Ram(Device):
         if Ram.is_addr_valid(addr):
             self.data[addr.value].value = data.value
 
-    def read(self, addr: c_uint16, read_only: c_bool = c_bool(False)) -> c_uint8:
+    def read(self, addr: c_uint16, read_only: bool = False) -> c_uint8:
         if Ram.is_addr_valid(addr):
             return self.data[addr.value]
         return c_uint8(Ram.INIT_VALUE)

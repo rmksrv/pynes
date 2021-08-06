@@ -2,7 +2,7 @@ from ctypes import c_uint8, c_uint16, c_bool
 from typing import Dict
 
 import pynes.core.cpu6502_addr_modes as ams
-from pynes.core.cpu6502_instructions import Cpu6502Instruction
+from pynes.core.cpu6502_instructions import Cpu6502Instruction, opcode_instruction_mapping, instruction_by_opcode
 from pynes.core.cpu6502_utils import get_mask
 from pynes.core.device.device import Device
 from pynes.core.device.exceptions import NotConnectedToBusException
@@ -31,16 +31,7 @@ class Cpu6502(Device):
         self.opcode = c_uint8(0x00)
         self.cycles = c_uint8(0)
 
-        self.lookup = self.opcode_instruction_mapping()
-
-    def opcode_instruction_mapping(self) -> Dict[int, Cpu6502Instruction]:
-        mapping = dict()
-
-        for instr_cls in Cpu6502Instruction.__subclasses__():
-            foo = instr_cls.opcodes_mapping(self)
-            mapping.update(foo)
-
-        return mapping
+        self.lookup = opcode_instruction_mapping(self)
 
     def reset(self) -> None:
         self.a.value = self.x.value = self.y.value = 0
@@ -114,8 +105,27 @@ class Cpu6502(Device):
 
         self.cycles.value = 8
 
-    def disassemble(self) -> Dict[int, str]:
-        pass
+    def disassemble(self, start, stop) -> Dict[int, str]:
+        map_lines = dict()
+        addr = start
+        lo = hi = 0x00
+        line_addr = 0
+
+        while addr <= stop:
+            line_addr = addr
+            # instruction addr
+            instr_str = '$' + str(hex(addr)).ljust(4) + ": "
+            # instruction
+            opcode = self.bus.get_ram().read(c_uint16(addr), True).value
+            instruction = instruction_by_opcode(opcode)
+            addr += 1
+            instr_str += " " + instruction.name
+            # addressing mode
+            # placeholder
+            # add to res
+            map_lines.update({line_addr: instr_str})
+
+        return map_lines
 
     def set_flag(self, flag: str, value: bool) -> None:
         mask = get_mask(flag)
@@ -128,7 +138,7 @@ class Cpu6502(Device):
     def read(self, addr: c_uint16) -> c_uint8:
         if not self.bus:
             raise NotConnectedToBusException()
-        return self.bus.get_ram().read(addr, c_bool(False))
+        return self.bus.get_ram().read(addr, False)
 
     def write(self, addr: c_uint16, data: c_uint8) -> None:
         if not self.bus:

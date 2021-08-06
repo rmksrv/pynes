@@ -1,6 +1,18 @@
+from ctypes import c_uint16, c_uint8
+
 from pynes.core.bus import Bus
 from pynes.core.cpu6502 import Cpu6502
 from pynes.core.ram import Ram
+
+
+def write_sample_6502_prog_to_cpu(cpu: Cpu6502) -> None:
+    prog = [0xA2, 0x0A, 0x8E, 0x00, 0x00, 0xA2, 0x03, 0x8E,
+            0x01, 0x00, 0xAC, 0x00, 0x00, 0xA9, 0x00, 0x18,
+            0x6D, 0x01, 0x00, 0x88, 0xD0, 0xFA, 0x8D, 0x02,
+            0x00, 0xEA, 0xEA, 0xEA]
+    for addr, opc in enumerate(prog):
+        cpu.write(c_uint16(addr), c_uint8(opc))
+
 
 if __name__ == '__main__':
     test_cpu = Cpu6502()
@@ -12,9 +24,9 @@ if __name__ == '__main__':
 
     print("Created test Bus:")
     print(test_bus)
+    print("Writing test prog")
+    write_sample_6502_prog_to_cpu(test_cpu)
 
-    # test_cpu.c.value = True
-    test_cpu.set_flag('c', True)
-    op = test_cpu.lookup.get(0xb0)
-    print(op)
-    res = op.operate()
+    lines = test_cpu.disassemble(0x00, 0x0f)
+    for _, string in lines.items():
+        print(string)

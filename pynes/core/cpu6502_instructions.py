@@ -9,6 +9,7 @@ from pynes.core.cpu6502_utils import get_mask
 
 # http://www.obelisk.me.uk/6502/reference.html was used as instructions reference
 
+
 # instruction template
 class Cpu6502Instruction(ABC):
 
@@ -32,6 +33,17 @@ class Cpu6502Instruction(ABC):
         pass
 
 
+def opcode_instruction_mapping(cpu: Optional[FakeDevice]) -> Dict[int, Cpu6502Instruction]:
+    mapping = dict()
+
+    for instr_cls in Cpu6502Instruction.__subclasses__():
+        foo = instr_cls.opcodes_mapping(cpu)
+        mapping.update(foo)
+
+    return mapping
+
+
+# instructions
 class ADC(Cpu6502Instruction):
     """
     Add with Carry: This instruction adds the contents of a memory location to
@@ -1004,6 +1016,7 @@ class ROR(Cpu6502Instruction):
     is filled with the current value of the carry flag whilst the old bit 0 becomes the
     new carry flag value.
     """
+
     def operate(self):
         self.cpu.fetch()
         tmp = c_uint16((self.cpu.get_flag('c') << 7) | (self.cpu.fetched.value >> 1))
@@ -1336,9 +1349,14 @@ class XXX(Cpu6502Instruction):
     """
     For illegal opcodes
     """
+
     def operate(self) -> c_uint8:
         return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
         return {}
+
+
+def instruction_by_opcode(opcode: int) -> Cpu6502Instruction:
+    return opcode_instruction_mapping(None).get(opcode, XXX(None, cycles=c_uint8(0), addr_mode=None))
