@@ -1057,8 +1057,19 @@ class RTI(Cpu6502Instruction):
 
 
 class RTS(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Return from Subroutine: The RTS instruction is used at the end of a subroutine
+    to return to the calling routine. It pulls the program counter (minus one) from
+    the stack.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.sp.value += 1
+        self.cpu.pc.value = self.cpu.read(c_uint16(0x0100 + self.cpu.sp.value)).value
+        self.cpu.sp.value += 1
+        self.cpu.pc.value |= self.cpu.read(c_uint16((0x0100 + self.cpu.sp.value) << 8)).value
+        self.cpu.pc.value += 1
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1151,8 +1162,13 @@ class SEI(Cpu6502Instruction):
 
 
 class STA(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Store Accumulator: Stores the contents of the accumulator into memory.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.write(self.cpu.addr_abs, self.cpu.a)
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1168,8 +1184,13 @@ class STA(Cpu6502Instruction):
 
 
 class STX(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Store X Register: Stores the contents of the X register into memory.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.write(self.cpu.addr_abs, self.cpu.x)
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1181,8 +1202,13 @@ class STX(Cpu6502Instruction):
 
 
 class STY(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Store Y Register: Stores the contents of the Y register into memory.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.write(self.cpu.addr_abs, self.cpu.y)
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1194,8 +1220,16 @@ class STY(Cpu6502Instruction):
 
 
 class TAX(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Transfer Accumulator to X: Copies the current contents of the accumulator
+    into the X register and sets the zero and negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.x.value = self.cpu.a.value
+        self.cpu.set_flag('z', self.cpu.x.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.x.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1205,8 +1239,16 @@ class TAX(Cpu6502Instruction):
 
 
 class TAY(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Transfer Accumulator to Y: Copies the current contents of the accumulator
+    into the Y register and sets the zero and negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.y.value = self.cpu.a.value
+        self.cpu.set_flag('z', self.cpu.y.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.y.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1216,8 +1258,17 @@ class TAY(Cpu6502Instruction):
 
 
 class TSX(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Transfer Stack Pointer to X: Copies the current contents of the stack
+    register into the X register and sets the zero and negative flags as
+    appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.x.value = self.cpu.sp.value
+        self.cpu.set_flag('z', self.cpu.x.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.x.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1227,8 +1278,16 @@ class TSX(Cpu6502Instruction):
 
 
 class TXA(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Transfer X to Accumulator: Copies the current contents of the X register
+    into the accumulator and sets the zero and negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.a.value = self.cpu.x.value
+        self.cpu.set_flag('z', self.cpu.a.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.a.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1238,8 +1297,14 @@ class TXA(Cpu6502Instruction):
 
 
 class TXS(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Transfer X to Stack Pointer: Copies the current contents of the X register
+    into the stack register.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.sp.value = self.cpu.x.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1249,8 +1314,16 @@ class TXS(Cpu6502Instruction):
 
 
 class TYA(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Transfer Y to Accumulator: Copies the current contents of the Y register
+    into the accumulator and sets the zero and negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.a.value = self.cpu.y.value
+        self.cpu.set_flag('z', self.cpu.a.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.a.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -1260,8 +1333,11 @@ class TYA(Cpu6502Instruction):
 
 
 class XXX(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    For illegal opcodes
+    """
+    def operate(self) -> c_uint8:
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
