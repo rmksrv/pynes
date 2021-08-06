@@ -331,6 +331,11 @@ def test_pla(cpu: Cpu6502, init_sp_value: int, init_data: int):
     assert cpu.a.value == c_uint8(init_data).value
 
 
+@pytest.mark.skip
+def test_rti(cpu: Cpu6502):
+    pass
+
+
 @pytest.mark.parametrize('init_data_value, init_a_value, init_c_value, '
                          'exp_a_value, exp_c_value, exp_z_value, exp_n_value, exp_v_value',
                          [

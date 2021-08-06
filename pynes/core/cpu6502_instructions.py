@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from ctypes import c_uint8, c_uint16
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, List
 
 import pynes.core.cpu6502_addr_modes as ams
 from pynes.core.device.fake_device import FakeDevice
+from pynes.core.utils import get_mask
 
 
 # http://www.obelisk.me.uk/6502/reference.html was used as instructions reference
@@ -37,6 +38,7 @@ class ADC(Cpu6502Instruction):
     the accumulator together with the carry bit. If overflow occurs the carry bit
     is set, this enables multiple byte addition to be performed.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.fetch()
         tmp = c_uint16(self.cpu.a.value + self.cpu.fetched.value + int(self.cpu.get_flag('c')))
@@ -69,6 +71,7 @@ class AND(Cpu6502Instruction):
     """
     Logical AND: performed bit by bit on acc value with fetched from memory byte
     """
+
     def operate(self) -> c_uint8:
         self.cpu.fetch()
         self.cpu.a.value &= self.cpu.fetched.value
@@ -92,8 +95,28 @@ class AND(Cpu6502Instruction):
 
 
 class ASL(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Arithmetic Shift Left: This operation shifts all the bits of the accumulator or memory contents one
+    bit left. Bit 0 is set to 0 and bit 7 is placed in the carry flag. The effect of this operation is
+    to multiply the memory contents by 2 (ignoring 2's complement considerations), setting the carry
+    if the result will not fit in 8 bits.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        tmp = c_uint16(self.cpu.fetched.value << 1)
+
+        self.cpu.set_flag('c', (tmp.value & 0xff00) > 0)
+        self.cpu.set_flag('z', (tmp.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(tmp.value & 0x80))
+
+        result = c_uint8(tmp.value & 0x00ff)
+        if self.cpu.lookup[self.cpu.opcode.value].addr_mode == ams.am_imp:
+            self.cpu.a.value = result.value
+        else:
+            self.cpu.write(self.cpu.addr_abs, result)
+
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -110,6 +133,7 @@ class BCC(Cpu6502Instruction):
     """
     Branch if Carry Clear: if C not set then add relative address to PC to cause a branch to new location
     """
+
     def operate(self) -> c_uint8:
         if not self.cpu.get_flag('c'):
             self.cpu.cycles.value += 1
@@ -133,6 +157,7 @@ class BCS(Cpu6502Instruction):
     """
     Branch if Carry Set: if C set then add relative address to PC to cause a branch to new location
     """
+
     def operate(self) -> c_uint8:
         if self.cpu.get_flag('c'):
             self.cpu.cycles.value += 1
@@ -157,6 +182,7 @@ class BEQ(Cpu6502Instruction):
     Branch if Equal: If the zero flag is set then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
+
     def operate(self) -> c_uint8:
         if self.cpu.get_flag('z'):
             self.cpu.cycles.value += 1
@@ -177,8 +203,22 @@ class BEQ(Cpu6502Instruction):
 
 
 class BIT(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Bit Test: This instructions is used to test if one or more bits are set in a target
+    memory location. The mask pattern in A is ANDed with the value in memory to set or
+    clear the zero flag, but the result is not kept. Bits 7 and 6 of the value from
+    memory are copied into the N and V flags.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        tmp = self.cpu.a.value & self.cpu.fetched.value
+
+        self.cpu.set_flag('z', (tmp & 0xff) == 0)
+        self.cpu.set_flag('n', bool(self.cpu.fetched.value & (1 << 7)))
+        self.cpu.set_flag('v', bool(self.cpu.fetched.value & (1 << 6)))
+
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -193,6 +233,7 @@ class BMI(Cpu6502Instruction):
     Branch if Minus: If the negative flag is set then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
+
     def operate(self) -> c_uint8:
         if self.cpu.get_flag('n'):
             self.cpu.cycles.value += 1
@@ -217,6 +258,7 @@ class BNE(Cpu6502Instruction):
     Branch if Not Equal: If the zero flag is clear then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
+
     def operate(self) -> c_uint8:
         if not self.cpu.get_flag('z'):
             self.cpu.cycles.value += 1
@@ -241,6 +283,7 @@ class BPL(Cpu6502Instruction):
     Branch if Positive: If the negative flag is clear then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
+
     def operate(self) -> c_uint8:
         if not self.cpu.get_flag('n'):
             self.cpu.cycles.value += 1
@@ -261,8 +304,31 @@ class BPL(Cpu6502Instruction):
 
 
 class BRK(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Force Interrupt: The BRK instruction forces the generation of an interrupt request.
+    The program counter and processor status are pushed on the stack then the IRQ interrupt
+    vector at $FFFE/F is loaded into the PC and the break flag in the status set to one.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.pc.value += 1
+
+        self.cpu.set_flag('i', True)
+        self.cpu.write(c_uint16(0x0100 + self.cpu.sp.value),
+                       c_uint8((self.cpu.pc.value >> 8) & 0x00ff))
+        self.cpu.sp.value -= 1
+        self.cpu.write(c_uint16(0x0100 + self.cpu.sp.value),
+                       c_uint8(self.cpu.pc.value & 0x00ff))
+        self.cpu.sp.value -= 1
+
+        self.cpu.set_flag('b', True)
+        self.cpu.write(c_uint16(0x0100 + self.cpu.sp.value), self.cpu.status)
+        self.cpu.sp.value -= 1
+        self.cpu.set_flag('b', False)
+
+        self.cpu.pc.value = c_uint16(self.cpu.read(c_uint16(0xfffe)).value |
+                                     (self.cpu.read(c_uint16(0xffff)).value << 8))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -276,6 +342,7 @@ class BVC(Cpu6502Instruction):
     Branch if Overflow Clear: If the overflow flag is clear then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
+
     def operate(self) -> c_uint8:
         if not self.cpu.get_flag('v'):
             self.cpu.cycles.value += 1
@@ -300,6 +367,7 @@ class BVS(Cpu6502Instruction):
     Branch if Overflow Set: If the overflow flag is set then add the relative displacement
     to the program counter to cause a branch to a new location.
     """
+
     def operate(self) -> c_uint8:
         if self.cpu.get_flag('v'):
             self.cpu.cycles.value += 1
@@ -323,6 +391,7 @@ class CLC(Cpu6502Instruction):
     """
     Clear Carry Flag: Set the carry flag to zero.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.set_flag('c', False)
         return c_uint8(0)
@@ -338,6 +407,7 @@ class CLD(Cpu6502Instruction):
     """
     Clear Decimal Mode: Sets the decimal mode flag to zero.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.set_flag('d', False)
         return c_uint8(0)
@@ -354,6 +424,7 @@ class CLI(Cpu6502Instruction):
     Clear Interrupt Disable: Clears the interrupt disable flag allowing normal
     interrupt requests to be serviced.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.set_flag('i', False)
         return c_uint8(0)
@@ -369,6 +440,7 @@ class CLV(Cpu6502Instruction):
     """
     Clear Overflow Flag: Clears the overflow flag.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.set_flag('v', False)
         return c_uint8(0)
@@ -381,8 +453,20 @@ class CLV(Cpu6502Instruction):
 
 
 class CMP(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Compare: This instruction compares the contents of the accumulator with another memory
+    held value and sets the zero and carry flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        tmp = self.cpu.a.value - self.cpu.fetched.value
+
+        self.cpu.set_flag('c', self.cpu.a.value >= self.cpu.fetched.value)
+        self.cpu.set_flag('z', (tmp & 0xff) == 0x00)
+        self.cpu.set_flag('n', bool(tmp & 0x80))
+
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -399,8 +483,20 @@ class CMP(Cpu6502Instruction):
 
 
 class CPX(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Compare X Register: This instruction compares the contents of the X register with another
+    memory held value and sets the zero and carry flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        tmp = self.cpu.x.value - self.cpu.fetched.value
+
+        self.cpu.set_flag('c', self.cpu.x.value >= self.cpu.fetched.value)
+        self.cpu.set_flag('z', (tmp & 0xff) == 0x00)
+        self.cpu.set_flag('n', bool(tmp & 0x80))
+
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -412,8 +508,20 @@ class CPX(Cpu6502Instruction):
 
 
 class CPY(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Compare Y Register: This instruction compares the contents of the Y register with another
+    memory held value and sets the zero and carry flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        tmp = self.cpu.y.value - self.cpu.fetched.value
+
+        self.cpu.set_flag('c', self.cpu.y.value >= self.cpu.fetched.value)
+        self.cpu.set_flag('z', (tmp & 0xff) == 0x00)
+        self.cpu.set_flag('n', bool(tmp & 0x80))
+
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -425,8 +533,20 @@ class CPY(Cpu6502Instruction):
 
 
 class DEC(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Decrement Memory: Subtracts one from the value held at a specified memory location setting
+    the zero and negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+
+        tmp = self.cpu.fetched.value - 1
+        self.cpu.write(self.cpu.addr_abs, c_uint8(tmp))
+        self.cpu.set_flag('z', (tmp & 0xff) == 0)
+        self.cpu.set_flag('n', bool(tmp & 0x80))
+
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -439,8 +559,16 @@ class DEC(Cpu6502Instruction):
 
 
 class DEX(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Decrement X Register: Subtracts one from the X register setting the zero and negative
+    flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.x.value -= 1
+        self.cpu.set_flag('z', (self.cpu.x.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(self.cpu.x.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -450,8 +578,16 @@ class DEX(Cpu6502Instruction):
 
 
 class DEY(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Decrement Y Register: Subtracts one from the Y register setting the zero and negative
+    flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.y.value -= 1
+        self.cpu.set_flag('z', (self.cpu.y.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(self.cpu.y.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -461,8 +597,18 @@ class DEY(Cpu6502Instruction):
 
 
 class EOR(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Exclusive OR: An exclusive OR is performed, bit by bit, on the accumulator contents
+    using the contents of a byte of memory.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        self.cpu.a.value ^= self.cpu.fetched.value
+
+        self.cpu.set_flag('z', self.cpu.a.value == 0x00)
+        self.cpu.set_flag('n', bool(self.cpu.a.value & 0x80))
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -479,8 +625,19 @@ class EOR(Cpu6502Instruction):
 
 
 class INC(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Increment Memory: Adds one to the value held at a specified memory location setting
+    the zero and negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+
+        tmp = self.cpu.fetched.value + 1
+        self.cpu.write(self.cpu.addr_abs, c_uint8(tmp))
+        self.cpu.set_flag('z', (tmp & 0xff) == 0)
+        self.cpu.set_flag('n', bool(tmp & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -493,8 +650,16 @@ class INC(Cpu6502Instruction):
 
 
 class INX(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Increment X Register: Adds one to the X register setting the zero and negative flags
+    as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.x.value += 1
+        self.cpu.set_flag('z', (self.cpu.x.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(self.cpu.x.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -504,8 +669,16 @@ class INX(Cpu6502Instruction):
 
 
 class INY(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Increment Y Register: Adds one to the Y register setting the zero and negative flags
+    as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.y.value += 1
+        self.cpu.set_flag('z', (self.cpu.y.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(self.cpu.y.value & 0x80))
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -515,8 +688,19 @@ class INY(Cpu6502Instruction):
 
 
 class JMP(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Jump: Sets the program counter to the address specified by the operand.
+    NOTE:
+    An original 6502 has does not correctly fetch the target address if the indirect vector
+    falls on a page boundary (e.g. $xxFF where xx is any value from $00 to $FF). In this case
+    fetches the LSB from $xxFF as expected but takes the MSB from $xx00. This is fixed in
+    some later chips like the 65SC02 so for compatibility always ensure the indirect vector
+    is not at the end of the page.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -527,8 +711,23 @@ class JMP(Cpu6502Instruction):
 
 
 class JSR(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Jump to Subroutine: The JSR instruction pushes the address (minus one) of the return
+    point on to the stack and then sets the program counter to the target memory address.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.pc.value -= 1
+
+        self.cpu.write(c_uint16(0x0100 + self.cpu.sp.value),
+                       c_uint8((self.cpu.pc.value >> 8) & 0x00ff))
+        self.cpu.sp.value -= 1
+        self.cpu.write(c_uint16(0x0100 + self.cpu.sp.value),
+                       c_uint8(self.cpu.pc.value & 0x00ff))
+        self.cpu.sp.value -= 1
+
+        self.cpu.pc.value = self.cpu.addr_abs.value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -538,8 +737,16 @@ class JSR(Cpu6502Instruction):
 
 
 class LDA(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Load Accumulator: Loads a byte of memory into the accumulator setting the zero and
+    negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.a.value = self.cpu.fetch().value
+        self.cpu.set_flag('z', self.cpu.a.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.a.value & 0x80))
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -556,8 +763,16 @@ class LDA(Cpu6502Instruction):
 
 
 class LDX(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Load X Register: Loads a byte of memory into the X register setting the zero
+    and negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.x.value = self.cpu.fetch().value
+        self.cpu.set_flag('z', self.cpu.x.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.x.value & 0x80))
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -571,8 +786,16 @@ class LDX(Cpu6502Instruction):
 
 
 class LDY(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Load Y Register: Loads a byte of memory into the Y register setting the zero
+    and negative flags as appropriate.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.y.value = self.cpu.fetch().value
+        self.cpu.set_flag('z', self.cpu.y.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.y.value & 0x80))
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -586,8 +809,25 @@ class LDY(Cpu6502Instruction):
 
 
 class LSR(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Logical Shift Right: Each of the bits in A or M is shift one place to the right.
+    The bit that was in bit 0 is shifted into the carry flag. Bit 7 is set to zero.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        self.cpu.set_flag('c', bool(self.cpu.fetched.value & 0x0001))
+        tmp = c_uint16(self.cpu.fetched.value >> 1)
+        self.cpu.set_flag('z', (tmp.value & 0xff) == 0)
+        self.cpu.set_flag('n', bool(tmp.value & 0x80))
+        result = c_uint8(tmp.value & 0x00ff)
+
+        if self.cpu.lookup[self.cpu.opcode.value].addr_mode == ams.am_imp:
+            self.cpu.a.value = result.value
+        else:
+            self.cpu.write(self.cpu.addr_abs, result)
+
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -601,8 +841,13 @@ class LSR(Cpu6502Instruction):
 
 
 class NOP(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    No Operation: The NOP instruction causes no changes to the processor other
+    than the normal incrementing of the program counter to the next instruction.
+    """
+
+    def operate(self) -> c_uint8:
+        return c_uint8(1) if self.cpu.opcode.value in NOP.illegal_opcodes() else c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -610,10 +855,23 @@ class NOP(Cpu6502Instruction):
             0xea: NOP(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
 
+    @staticmethod
+    def illegal_opcodes() -> List[int]:
+        return [0x1c, 0x3c, 0x5c, 0x7c, 0xdc, 0xfc]
+
 
 class ORA(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Logical Inclusive OR: An inclusive OR is performed, bit by bit, on the
+    accumulator contents using the contents of a byte of memory.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.fetch()
+        self.cpu.a.value |= self.cpu.fetched.value
+        self.cpu.set_flag('z', self.cpu.a.value == 0)
+        self.cpu.set_flag('n', bool(self.cpu.a.value & 0x80))
+        return c_uint8(1)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -633,6 +891,7 @@ class PHA(Cpu6502Instruction):
     """
     Push Accumulator: Pushes a copy of the accumulator on to the stack.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.write(c_uint16(0x0100 + self.cpu.sp.value), self.cpu.a)
         self.cpu.sp.value -= 1
@@ -646,8 +905,17 @@ class PHA(Cpu6502Instruction):
 
 
 class PHP(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Push Processor Status: Pushes a copy of the status flags on to the stack.
+    """
+
+    def operate(self) -> c_uint8:
+        b = get_mask('b')
+        u = get_mask('u')
+        self.cpu.write(c_uint16(0x0100 + self.cpu.sp.value), c_uint8(self.cpu.status.value | b | u))
+        self.cpu.set_flag('b', False)
+        self.cpu.set_flag('u', False)
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -661,6 +929,7 @@ class PLA(Cpu6502Instruction):
     Pull Accumulator: Pulls an 8 bit value from the stack and into the accumulator.
     The zero and negative flags are set as appropriate.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.sp.value += 1
         self.cpu.a.value = self.cpu.read(c_uint16(0x0100 + self.cpu.sp.value)).value
@@ -676,8 +945,16 @@ class PLA(Cpu6502Instruction):
 
 
 class PLP(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Pull Processor Status: Pulls an 8 bit value from the stack and into the processor
+    flags. The flags will take on new states as determined by the value pulled.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.sp.value += 1
+        self.cpu.status.value = self.cpu.read(c_uint16(0x0100 + self.cpu.sp.value))
+        self.cpu.set_flag('u', True)
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -717,8 +994,22 @@ class ROR(Cpu6502Instruction):
 
 
 class RTI(Cpu6502Instruction):
-    def operate(self):
-        pass
+    """
+    Return from Interrupt: The RTI instruction is used at the end of an interrupt processing routine.
+    It pulls the processor flags from the stack followed by the program counter.
+    """
+
+    def operate(self) -> c_uint8:
+        self.cpu.sp.value += 1
+        self.cpu.status.value = self.cpu.read(c_uint16(0x0100 + self.cpu.sp.value)).value
+        self.cpu.status.value &= ~self.cpu.get_flag('b')
+        self.cpu.status.value &= ~self.cpu.get_flag('u')
+
+        self.cpu.sp.value += 1
+        self.cpu.pc.value = self.cpu.read(c_uint16(0x0100 + self.cpu.sp.value)).value
+        self.cpu.sp.value += 1
+        self.cpu.pc.value |= self.cpu.read(c_uint16((0x0100 + self.cpu.sp.value) << 8)).value
+        return c_uint8(0)
 
     @staticmethod
     def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
@@ -744,6 +1035,7 @@ class SBC(Cpu6502Instruction):
     to the accumulator together with the not of the carry bit. If overflow occurs the
     carry bit is clear, this enables multiple byte subtraction to be performed.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.fetch()
         neg_fetch = c_uint16(self.cpu.fetched.value ^ 0x00ff)
@@ -775,6 +1067,7 @@ class SEC(Cpu6502Instruction):
     """
     Set Carry Flag: Set the carry flag to one.
     """
+
     def operate(self) -> c_uint8:
         # self.cpu.c.value = True
         self.cpu.set_flag('c', True)
@@ -791,6 +1084,7 @@ class SED(Cpu6502Instruction):
     """
     Set Decimal Flag: Set the decimal mode flag to one.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.set_flag('d', True)
         return c_uint8(0)
@@ -806,6 +1100,7 @@ class SEI(Cpu6502Instruction):
     """
     Set Interrupt Disable: Set the interrupt disable flag to one.
     """
+
     def operate(self) -> c_uint8:
         self.cpu.set_flag('i', True)
         return c_uint8(0)

@@ -5,6 +5,7 @@ import pynes.core.cpu6502_addr_modes as ams
 from pynes.core.cpu6502_instructions import Cpu6502Instruction
 from pynes.core.device.device import Device
 from pynes.core.device.exceptions import NotConnectedToBusException
+from pynes.core.utils import get_mask
 
 
 class Cpu6502(Device):
@@ -33,15 +34,11 @@ class Cpu6502(Device):
         self.lookup = self.opcode_instruction_mapping()
 
     def set_flag(self, flag: str, value: bool) -> None:
-        flags = ['c', 'z', 'i', 'd', 'b', 'u', 'v', 'n']
-        shift_amt = flags.index(flag)
-        mask = 1 << shift_amt
+        mask = get_mask(flag)
         self.status.value = self.status.value | mask if value else self.status.value & ~mask
 
     def get_flag(self, flag: str) -> bool:
-        flags = ['c', 'z', 'i', 'd', 'b', 'u', 'v', 'n']
-        shift_amt = flags.index(flag)
-        mask = 1 << shift_amt
+        mask = get_mask(flag)
         return (self.status.value & mask) > 0
 
     def reset(self) -> None:
@@ -98,7 +95,23 @@ class Cpu6502(Device):
         self.cycles.value = 7
 
     def nmi(self) -> None:
-        pass
+        self.write(c_uint16(0x0100 + self.sp.value), c_uint8((self.pc.value >> 8) & 0x00ff))
+        self.sp.value -= 1
+        self.write(c_uint16(0x0100 + self.sp.value), c_uint8(self.pc.value & 0x00ff))
+        self.sp.value -= 1
+
+        self.set_flag('b', False)
+        self.set_flag('u', True)
+        self.set_flag('i', True)
+        self.write(c_uint16(0x0100 + self.sp.value), self.status)
+        self.sp.value -= 1
+
+        self.addr_abs.value = 0xfffa
+        lo = self.read(c_uint16(self.addr_abs.value + 0))
+        hi = self.read(c_uint16(self.addr_abs.value + 1))
+        self.pc.value = (hi.value << 8) | lo.value
+
+        self.cycles.value = 8
 
     def fetch(self) -> c_uint8:
         if self.lookup.get(self.opcode.value).addr_mode == ams.am_imp:
