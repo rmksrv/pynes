@@ -4,7 +4,7 @@ from typing import Callable, Dict, Optional, List
 
 import pynes.core.cpu6502_addr_modes as ams
 from pynes.core.device.fake_device import FakeDevice
-from pynes.core.utils import get_mask
+from pynes.core.cpu6502_utils import get_mask
 
 
 # http://www.obelisk.me.uk/6502/reference.html was used as instructions reference

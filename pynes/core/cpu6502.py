@@ -3,9 +3,9 @@ from typing import Dict
 
 import pynes.core.cpu6502_addr_modes as ams
 from pynes.core.cpu6502_instructions import Cpu6502Instruction
+from pynes.core.cpu6502_utils import get_mask
 from pynes.core.device.device import Device
 from pynes.core.device.exceptions import NotConnectedToBusException
-from pynes.core.utils import get_mask
 
 
 class Cpu6502(Device):
@@ -33,18 +33,19 @@ class Cpu6502(Device):
 
         self.lookup = self.opcode_instruction_mapping()
 
-    def set_flag(self, flag: str, value: bool) -> None:
-        mask = get_mask(flag)
-        self.status.value = self.status.value | mask if value else self.status.value & ~mask
+    def opcode_instruction_mapping(self) -> Dict[int, Cpu6502Instruction]:
+        mapping = dict()
 
-    def get_flag(self, flag: str) -> bool:
-        mask = get_mask(flag)
-        return (self.status.value & mask) > 0
+        for instr_cls in Cpu6502Instruction.__subclasses__():
+            foo = instr_cls.opcodes_mapping(self)
+            mapping.update(foo)
+
+        return mapping
 
     def reset(self) -> None:
         self.a.value = self.x.value = self.y.value = 0
         self.sp.value = 0xfd
-        self.status.value = 0x00 | (1 << 5)
+        self.status.value = 0x00 | get_mask('u')
 
         self.addr_abs.value = 0xfffc
         lo = self.read(c_uint16(self.addr_abs.value + 0))
@@ -113,10 +114,16 @@ class Cpu6502(Device):
 
         self.cycles.value = 8
 
-    def fetch(self) -> c_uint8:
-        if self.lookup.get(self.opcode.value).addr_mode == ams.am_imp:
-            self.fetched = self.read(self.addr_abs)
-        return self.fetched
+    def disassemble(self) -> Dict[int, str]:
+        pass
+
+    def set_flag(self, flag: str, value: bool) -> None:
+        mask = get_mask(flag)
+        self.status.value = self.status.value | mask if value else self.status.value & ~mask
+
+    def get_flag(self, flag: str) -> bool:
+        mask = get_mask(flag)
+        return (self.status.value & mask) > 0
 
     def read(self, addr: c_uint16) -> c_uint8:
         if not self.bus:
@@ -128,11 +135,7 @@ class Cpu6502(Device):
             raise NotConnectedToBusException()
         self.bus.get_ram().write(addr, data)
 
-    def opcode_instruction_mapping(self) -> Dict[int, Cpu6502Instruction]:
-        mapping = dict()
-
-        for instr_cls in Cpu6502Instruction.__subclasses__():
-            foo = instr_cls.opcodes_mapping(self)
-            mapping.update(foo)
-
-        return mapping
+    def fetch(self) -> c_uint8:
+        if self.lookup.get(self.opcode.value).addr_mode == ams.am_imp:
+            self.fetched = self.read(self.addr_abs)
+        return self.fetched
