@@ -1,8 +1,8 @@
-from ctypes import c_uint8, c_uint16, c_bool
+from ctypes import c_uint8, c_uint16
 from typing import Dict
 
 import pynes.core.cpu6502_addr_modes as ams
-from pynes.core.cpu6502_instructions import Cpu6502Instruction, opcode_instruction_mapping, instruction_by_opcode
+from pynes.core.cpu6502_instructions import opcode_instruction_mapping, instruction_by_opcode
 from pynes.core.cpu6502_utils import get_mask
 from pynes.core.device.device import Device
 from pynes.core.device.exceptions import NotConnectedToBusException
@@ -106,22 +106,93 @@ class Cpu6502(Device):
         self.cycles.value = 8
 
     def disassemble(self, start, stop) -> Dict[int, str]:
+        space_amt = 12
         map_lines = dict()
-        addr = start
-        lo = hi = 0x00
+        addr = c_uint16(start)
+        lo = c_uint8(0)
+        hi = c_uint8(0)
         line_addr = 0
 
-        while addr <= stop:
-            line_addr = addr
+        while addr.value <= stop:
+            line_addr = addr.value
             # instruction addr
-            instr_str = '$' + str(hex(addr)).ljust(4) + ": "
+            instr_str = ('$' + str(hex(addr.value))).ljust(space_amt)
             # instruction
-            opcode = self.bus.get_ram().read(c_uint16(addr), True).value
+            opcode = self.bus.get_ram().read(addr, True).value
             instruction = instruction_by_opcode(opcode)
-            addr += 1
-            instr_str += " " + instruction.name
+            addr.value += 1
+            instr_str += instruction.name.ljust(space_amt)
             # addressing mode
-            # placeholder
+            # TODO: okay, I decided write a lot of if/elifs, but sure, there exists more
+            #  elegant way to do it (Strategy maybe?)
+            if instruction.addr_mode == ams.am_imp:
+                instr_str += "{IMP}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_imm:
+                value = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                instr_str += ("#$" + hex(value.value)).ljust(space_amt) + "{IMM}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_zp0:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi.value = 0x00
+                instr_str += ("$" + hex(lo.value) + ")").ljust(space_amt) + "{ZP0}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_zpx:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi.value = 0x00
+                instr_str += ("$" + hex(lo.value) + ", X)").ljust(space_amt) + "{ZPX}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_zpy:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi.value = 0x00
+                instr_str += ("$" + hex(lo.value) + ", Y)").ljust(space_amt) + "{ZPY}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_izx:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi.value = 0x00
+                instr_str += ("($" + hex(lo.value) + ", X)").ljust(space_amt) + "{IZX}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_izy:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi.value = 0x00
+                instr_str += ("($" + hex(lo.value) + ", Y)").ljust(space_amt) + "{IZY}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_abs:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                instr_str += ("$" + hex(c_uint16(
+                    (hi.value << 8) | lo.value
+                ).value)).ljust(space_amt) + "{ABS}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_abx:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                instr_str += ("$" + hex(c_uint16(
+                    (hi.value << 8) | lo.value
+                ).value)).ljust(space_amt) + ", X {ABX}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_aby:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                instr_str += ("$" + hex(c_uint16(
+                    (hi.value << 8) | lo.value
+                ).value)).ljust(space_amt) + ", X {ABY}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_ind:
+                lo = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                hi = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                instr_str += ("($" + hex(c_uint16(
+                    (hi.value << 8) | lo.value
+                ).value) + ")").ljust(space_amt) + "{IND}".ljust(space_amt)
+            elif instruction.addr_mode == ams.am_rel:
+                value = self.bus.get_ram().read(addr, True)
+                addr.value += 1
+                instr_str += ("$" + hex(value.value)).ljust(space_amt) + \
+                             ("[$" + hex(addr.value + value.value) + "]").ljust(space_amt) + "{REL}".ljust(space_amt)
             # add to res
             map_lines.update({line_addr: instr_str})
 

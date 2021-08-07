@@ -27,6 +27,6 @@ if __name__ == '__main__':
     print("Writing test prog")
     write_sample_6502_prog_to_cpu(test_cpu)
 
-    lines = test_cpu.disassemble(0x00, 0x0f)
+    lines = test_cpu.disassemble(0x00, 0x1f)
     for _, string in lines.items():
         print(string)
