@@ -3,6 +3,7 @@ from ctypes import c_uint16, c_uint8
 from pynes.core.bus import Bus
 from pynes.core.cpu6502 import Cpu6502
 from pynes.core.ram import Ram
+from pynes.demo.demo_cpu6502_render import DemoCpu6502Render
 
 
 def write_sample_6502_prog_to_cpu(cpu: Cpu6502) -> None:
@@ -22,11 +23,14 @@ if __name__ == '__main__':
     test_cpu.connect_to_bus(test_bus)
     test_ram.connect_to_bus(test_bus)
 
-    print("Created test Bus:")
-    print(test_bus)
-    print("Writing test prog")
+    # print("Created test Bus:")
+    # print(test_bus)
+    # print("Writing test prog")
     write_sample_6502_prog_to_cpu(test_cpu)
-
-    lines = test_cpu.disassemble(0x00, 0x1f)
-    for _, string in lines.items():
+    for _, string in test_cpu.disassemble(0x00, 0x1f).items():
         print(string)
+
+    my_demo = DemoCpu6502Render()
+    my_demo.setup()
+    write_sample_6502_prog_to_cpu(my_demo.bus.get_cpu6502())
+    my_demo.run()
