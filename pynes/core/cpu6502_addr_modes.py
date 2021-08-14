@@ -12,7 +12,7 @@ def am_imp(cpu: FakeDevice) -> c_uint8:
     :param cpu:
     :return:
     """
-    cpu.fetched = cpu.a
+    cpu.fetched.value = cpu.a.value
     return ADDR_MODE_EXIT_SUCCESS
 
 
@@ -22,8 +22,8 @@ def am_imm(cpu: FakeDevice) -> c_uint8:
     :param cpu:
     :return:
     """
-    cpu.addr_abs = cpu.pc
-    cpu.pc += 1
+    cpu.addr_abs.value = cpu.pc.value
+    cpu.pc.value += 1
     return ADDR_MODE_EXIT_SUCCESS
 
 
@@ -33,8 +33,8 @@ def am_zp0(cpu: FakeDevice) -> c_uint8:
     :param cpu:
     :return:
     """
-    cpu.addr_abs = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.addr_abs.value = cpu.read(cpu.pc).value
+    cpu.pc.value += 1
     cpu.addr_abs.value &= 0x00FF  # get 00 page with FF offset
     return ADDR_MODE_EXIT_SUCCESS
 
@@ -45,8 +45,8 @@ def am_zpx(cpu: FakeDevice) -> c_uint8:
     :param cpu:
     :return:
     """
-    cpu.addr_abs = c_uint16(cpu.read(cpu.pc).value + cpu.x.value)
-    cpu.pc += 1
+    cpu.addr_abs.value = c_uint16(cpu.read(cpu.pc).value + cpu.x.value).value
+    cpu.pc.value += 1
     cpu.addr_abs.value &= 0x00FF  # get 00 page with FF offset
     return ADDR_MODE_EXIT_SUCCESS
 
@@ -57,8 +57,8 @@ def am_zpy(cpu: FakeDevice) -> c_uint8:
     :param cpu:
     :return:
     """
-    cpu.addr_abs = c_uint16(cpu.read(cpu.pc).value + cpu.y.value)
-    cpu.pc += 1
+    cpu.addr_abs.value = c_uint16(cpu.read(cpu.pc).value + cpu.y.value).value
+    cpu.pc.value += 1
     cpu.addr_abs.value &= 0x00FF  # get 00 page with FF offset
     return ADDR_MODE_EXIT_SUCCESS
 
@@ -70,11 +70,11 @@ def am_abs(cpu: FakeDevice) -> c_uint8:
     :return:
     """
     lo = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
     hi = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
 
-    cpu.addr_abs = c_uint16((hi.value << 8) | lo.value)
+    cpu.addr_abs.value = c_uint16((hi.value << 8) | lo.value).value
 
     return ADDR_MODE_EXIT_SUCCESS
 
@@ -86,11 +86,11 @@ def am_abx(cpu: FakeDevice) -> c_uint8:
     :return:
     """
     lo = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
     hi = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
 
-    cpu.addr_abs = c_uint16(((hi.value << 8) | lo.value) + cpu.x.value)
+    cpu.addr_abs.value = c_uint16(((hi.value << 8) | lo.value) + cpu.x.value).value
 
     return ADDR_MODE_EXIT_SUCCESS if (cpu.addr_abs.value & 0xFF00) == (hi.value << 8) else ADDR_MODE_EXIT_ADD_CYCLE_NEED
 
@@ -102,11 +102,11 @@ def am_aby(cpu: FakeDevice) -> c_uint8:
     :return:
     """
     lo = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
     hi = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
 
-    cpu.addr_abs = c_uint16(((hi.value << 8) | lo.value) + cpu.y.value)
+    cpu.addr_abs.value = c_uint16(((hi.value << 8) | lo.value) + cpu.y.value).value
 
     return ADDR_MODE_EXIT_SUCCESS if (cpu.addr_abs.value & 0xFF00) == (hi.value << 8) else ADDR_MODE_EXIT_ADD_CYCLE_NEED
 
@@ -118,16 +118,17 @@ def am_ind(cpu: FakeDevice) -> c_uint8:
     :return:
     """
     ptr_lo = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
     ptr_hi = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
 
     ptr = c_uint16((ptr_hi.value << 8) | ptr_lo.value)
 
     # Page boundary hardware bug else normal behaviour
-    cpu.addr_abs = \
-        c_uint16((cpu.read(c_uint16(ptr.value & 0xFF00)).value << 8) | cpu.read(ptr).value) if ptr_lo.value == 0x00FF \
-        else c_uint16((cpu.read(c_uint16(ptr.value + 1)).value << 8) | cpu.read(ptr).value)
+    if ptr_lo.value == 0x00ff:
+        cpu.addr_abs.value = c_uint16((cpu.read(c_uint16(ptr.value & 0xFF00)).value << 8) | cpu.read(ptr).value).value
+    else:
+        cpu.addr_abs.value = c_uint16((cpu.read(c_uint16(ptr.value + 1)).value << 8) | cpu.read(ptr).value).value
 
     return ADDR_MODE_EXIT_SUCCESS
 
@@ -139,7 +140,7 @@ def am_izx(cpu: FakeDevice) -> c_uint8:
     :return:
     """
     t = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
 
     lo = cpu.read(c_uint16(
         (t.value + c_uint16(cpu.x.value).value) & 0x00FF)
@@ -148,7 +149,7 @@ def am_izx(cpu: FakeDevice) -> c_uint8:
         (t.value + c_uint16(cpu.x.value).value + 1) & 0x00FF)
     )
 
-    cpu.addr_abs = c_uint16((hi.value << 8) | lo.value)
+    cpu.addr_abs.value = c_uint16((hi.value << 8) | lo.value).value
 
     return ADDR_MODE_EXIT_SUCCESS
 
@@ -160,12 +161,12 @@ def am_izy(cpu: FakeDevice) -> c_uint8:
     :return:
     """
     t = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.pc.value += 1
 
     lo = cpu.read(c_uint16(t.value & 0x00FF))
     hi = cpu.read(c_uint16((t.value + 1) & 0x00FF))
 
-    cpu.addr_abs = c_uint16(((hi.value << 8) | lo.value) + cpu.y.value)
+    cpu.addr_abs.value = c_uint16(((hi.value << 8) | lo.value) + cpu.y.value).value
 
     return ADDR_MODE_EXIT_SUCCESS if (cpu.addr_abs.value & 0xFF00) == (hi.value << 8) else ADDR_MODE_EXIT_ADD_CYCLE_NEED
 
@@ -176,8 +177,8 @@ def am_rel(cpu: FakeDevice) -> c_uint8:
     :param cpu:
     :return:
     """
-    cpu.addr_rel = cpu.read(cpu.pc)
-    cpu.pc += 1
+    cpu.addr_rel.value = cpu.read(cpu.pc).value
+    cpu.pc.value += 1
     if cpu.addr_rel.value & 0x80:
         cpu.addr_rel.value |= 0xFF00
     return ADDR_MODE_EXIT_SUCCESS

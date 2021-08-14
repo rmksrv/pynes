@@ -1,4 +1,7 @@
 import pathlib
+from ctypes import c_uint8, c_uint16
+from typing import List, Tuple
+
 import pygame as pg
 from enum import Enum
 
@@ -8,8 +11,20 @@ from pynes.core.cpu6502_utils import FLAGS
 from pynes.core.ram import Ram
 
 
+def sample_6502_program() -> List[int]:
+    return [0xa2, 0x0a, 0x8e, 0x00, 0x00, 0xa2, 0x03, 0x8e,
+            0x01, 0x00, 0xac, 0x00, 0x00, 0xa9, 0x00, 0x18,
+            0x6d, 0x01, 0x00, 0x88, 0xd0, 0xfa, 0x8d, 0x02,
+            0x00, 0xea, 0xea, 0xea]
+
+
+def write_program_to_cpu(cpu: Cpu6502, program: List[int]) -> None:
+    for addr, opc in enumerate(program):
+        cpu.write(c_uint16(0x8000 + addr), c_uint8(opc))
+
+
 class Colors(Enum):
-    BLACK = (0x36, 0x36, 0x36)
+    BLACK = (0x20, 0x20, 0x20)
     WHITE = (0xb6, 0xb6, 0xb6)
     RED   = (0xff, 0x08, 0x83)
     GREEN = (0x83, 0xff, 0x08)
@@ -27,6 +42,9 @@ class DemoCpu6502Render:
         self.fps = DemoCpu6502Render.DEFAULT_FPS
 
         self.bus = self.get_prepared_bus()
+        write_program_to_cpu(self.bus.get_cpu6502(), sample_6502_program())
+        self.bus.get_cpu6502().reset()
+        self.bus.get_cpu6502().pc.value = 0x8000
 
     def setup(self, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT, fps: int = DEFAULT_FPS) -> None:
         self.width = width
@@ -40,35 +58,92 @@ class DemoCpu6502Render:
         clock = pg.time.Clock()
         screen = pg.display.set_mode((self.width, self.height))
         pg.display.set_caption("DemoCpu6502Render")
-        font = pg.font.Font(pathlib.Path(__file__).parent / '..' / 'resources' / 'fonts' / 'visitor1.ttf', 15)
+        font = pg.font.Font(pathlib.Path(__file__).parent / '..' / 'resources' / 'fonts' / 'joystix_monospace.ttf', 10)
 
         # main
-        running = True
-        while running:
+        while self.event_bypass():
             # some control stuff
             clock.tick(self.fps)
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    running = False
 
-            # background
+            # drawing
             screen.fill(Colors.BLACK.value)
-            # draw info
+            self.render_memory(screen, font)
+            self.render_disassembled_code(screen, font)
             self.render_status(screen, font)
             self.render_pc(screen, font)
             self.render_a(screen, font)
             self.render_x(screen, font)
             self.render_y(screen, font)
             self.render_sp(screen, font)
+            self.render_info(screen, font)
 
             # upd screen
             pg.display.flip()
+            # pg.display.update()
 
         pg.font.quit()
         pg.quit()
 
-    def render_ram(self, screen: pg.display, font: pg.font.Font) -> None:
-        pass
+    def event_bypass(self) -> bool:
+        running = True
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                running = False
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE:
+                    self.bus.get_cpu6502().clock()
+                    while not self.bus.get_cpu6502().complete():
+                        self.bus.get_cpu6502().clock()
+                elif event.key == pg.K_r:
+                    self.bus.get_cpu6502().reset()
+                    self.bus.get_cpu6502().pc.value = 0x8000
+                elif event.key == pg.K_i:
+                    self.bus.get_cpu6502().irq()
+                elif event.key == pg.K_n:
+                    self.bus.get_cpu6502().nmi()
+                elif event.key == pg.K_q:
+                    running = False
+        return running
+
+    def render_memory(self, screen: pg.display, font: pg.font.Font) -> None:
+        memory_dump = self.bus.get_ram().data
+
+        def memory_page_strs(mem: List[c_uint8], page_num: int) -> List[str]:
+            page = list()
+            lo = page_num * 0x100
+            hi = page_num * 0x100 + 0x101
+            viewing_mem = mem[lo:hi]
+            line = '$' + hex(lo)[2:].zfill(4) + ': '
+            for i, cell in enumerate(viewing_mem):
+                if i % 0x10 == 0 and i != 0:
+                    page.append(line)
+                    line = '$' + hex(page_num)[2:].zfill(2) + hex(i)[2:].zfill(2) + ': '
+                line += hex(cell.value)[2:].zfill(2) + ' '
+            return page
+
+        def render_memory_page(page: List[str], pos: Tuple[int, int]) -> None:
+            for i, line in enumerate(page):
+                line_label = font.render(line, False, Colors.WHITE.value)
+                screen.blit(line_label, (pos[0], pos[1] + i * 15))
+
+        zero_page = memory_page_strs(memory_dump, 0)
+        additional_page = memory_page_strs(memory_dump, 0x80)
+        render_memory_page(zero_page, (10, 10))
+        render_memory_page(additional_page, (10, 270))
+
+    def render_disassembled_code(self, screen: pg.display, font: pg.font.Font) -> None:
+        pc = self.bus.get_cpu6502().pc.value
+        lo = max(pc - 30, 0x0000)
+        hi = min(pc + 30, 0xffff)
+        instructions = self.bus.get_cpu6502().disassemble(lo, hi)
+        curr_ins_index = list(instructions).index(pc)
+        view_rng_lo = max(curr_ins_index - 10, 0x0000)
+        view_rng_hi = min(curr_ins_index + 10, 0xffff)
+        viewing_ins = list(instructions.items())[view_rng_lo:view_rng_hi]
+        for i, (addr, line) in enumerate(viewing_ins):
+            color = Colors.BLUE.value if addr == pc else Colors.WHITE.value
+            ins_label = font.render(line, False, color)
+            screen.blit(ins_label, (self.width - 280, 110 + 15 * i))
 
     def render_status(self, screen: pg.display, font: pg.font.Font) -> None:
         # preparing
@@ -83,34 +158,44 @@ class DemoCpu6502Render:
                 color = Colors.GREEN if flag else Colors.RED
             flag_labels.append(font.render(fname, False, color.value))
         # positioning
-        screen.blit(status_label, (self.width - 200, 10))
+        screen.blit(status_label, (self.width - 280, 10))
         for i, l in enumerate(flag_labels):
-            screen.blit(l, (self.width - 135 + 15 * i, 10))
+            screen.blit(l, (self.width - 215 + 15 * i, 10))
 
     def render_pc(self, screen: pg.display, font: pg.font.Font) -> None:
         pc_text = '$' + hex(self.bus.get_cpu6502().pc.value)[2:].zfill(4)
         pc_label = font.render(f"pc:     {pc_text}", False, Colors.WHITE.value)
-        screen.blit(pc_label, (self.width - 200, 25))
+        screen.blit(pc_label, (self.width - 280, 25))
 
     def render_a(self, screen: pg.display, font: pg.font.Font) -> None:
-        a_text = '$' + hex(self.bus.get_cpu6502().a.value)[2:].zfill(2)
+        a_val = self.bus.get_cpu6502().a.value
+        a_text = '$' + hex(a_val)[2:].zfill(2) + '  [' + str(a_val) + ']'
         a_label = font.render(f"a:      {a_text}", False, Colors.WHITE.value)
-        screen.blit(a_label, (self.width - 200, 40))
+        screen.blit(a_label, (self.width - 280, 40))
 
     def render_x(self, screen: pg.display, font: pg.font.Font) -> None:
-        x_text = '$' + hex(self.bus.get_cpu6502().x.value)[2:].zfill(2)
+        x_val = self.bus.get_cpu6502().x.value
+        x_text = '$' + hex(x_val)[2:].zfill(2) + '  [' + str(x_val) + ']'
         x_label = font.render(f"x:      {x_text}", False, Colors.WHITE.value)
-        screen.blit(x_label, (self.width - 200, 55))
+        screen.blit(x_label, (self.width - 280, 55))
 
     def render_y(self, screen: pg.display, font: pg.font.Font) -> None:
-        y_text = '$' + hex(self.bus.get_cpu6502().y.value)[2:].zfill(2)
+        y_val = self.bus.get_cpu6502().y.value
+        y_text = '$' + hex(y_val)[2:].zfill(2) + '  [' + str(y_val) + ']'
         y_label = font.render(f"y:      {y_text}", False, Colors.WHITE.value)
-        screen.blit(y_label, (self.width - 200, 70))
+        screen.blit(y_label, (self.width - 280, 70))
 
     def render_sp(self, screen: pg.display, font: pg.font.Font) -> None:
         sp_text = '$' + hex(self.bus.get_cpu6502().sp.value)[2:].zfill(2)
         sp_label = font.render(f"sp:     {sp_text}", False, Colors.WHITE.value)
-        screen.blit(sp_label, (self.width - 200, 85))
+        screen.blit(sp_label, (self.width - 280, 85))
+
+    def render_info(self, screen: pg.display, font: pg.font.Font) -> None:
+        info_label = font.render("SPACE = Step Instruction    R = RESET    "
+                                 "I = IRQ    N = NMI", False, Colors.WHITE.value)
+        q_label = font.render("Q = Quit", False, Colors.RED.value)
+        screen.blit(info_label, (10, 550))
+        screen.blit(q_label, (self.width - 75, 550))
 
     @staticmethod
     def get_prepared_bus() -> Bus:

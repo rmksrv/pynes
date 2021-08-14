@@ -340,7 +340,7 @@ class BRK(Cpu6502Instruction):
 
         self.cpu.pc.value = c_uint16(
             self.cpu.read(c_uint16(0xfffe)).value | (self.cpu.read(c_uint16(0xffff)).value << 8)
-        )
+        ).value
         return c_uint8(0)
 
     @staticmethod
@@ -782,7 +782,9 @@ class LDX(Cpu6502Instruction):
     """
 
     def operate(self) -> c_uint8:
-        self.cpu.x.value = self.cpu.fetch().value
+        # self.cpu.x.value = self.cpu.fetch().value
+        self.cpu.fetch()
+        self.cpu.x.value = self.cpu.fetched.value
         self.cpu.set_flag('z', self.cpu.x.value == 0)
         self.cpu.set_flag('n', bool(self.cpu.x.value & 0x80))
         return c_uint8(1)
@@ -1358,5 +1360,6 @@ class XXX(Cpu6502Instruction):
         return {}
 
 
-def instruction_by_opcode(opcode: int) -> Cpu6502Instruction:
-    return opcode_instruction_mapping(None).get(opcode, XXX(None, cycles=c_uint8(0), addr_mode=None))
+def instruction_by_opcode(opcode: int,
+                          cpu: Optional[FakeDevice] = None) -> Cpu6502Instruction:
+    return opcode_instruction_mapping(cpu).get(opcode, XXX(cpu, cycles=c_uint8(0), addr_mode=ams.am_imp))

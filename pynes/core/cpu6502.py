@@ -34,15 +34,15 @@ class Cpu6502(Device):
         self.lookup = opcode_instruction_mapping(self)
 
     def reset(self) -> None:
-        self.a.value = self.x.value = self.y.value = 0
-        self.sp.value = 0xfd
-        self.status.value = 0x00 | get_mask('u')
-
         self.addr_abs.value = 0xfffc
         lo = self.read(c_uint16(self.addr_abs.value + 0))
         hi = self.read(c_uint16(self.addr_abs.value + 1))
 
         self.pc.value = (hi.value << 8) | lo.value
+
+        self.a.value = self.x.value = self.y.value = 0
+        self.sp.value = 0xfd
+        self.status.value = 0x00 | get_mask('u')
 
         self.addr_rel.value = 0x0000
         self.addr_abs.value = 0x0000
@@ -52,16 +52,22 @@ class Cpu6502(Device):
 
     def clock(self) -> None:
         if self.cycles.value == 0:
-            self.opcode = self.read(self.pc)
+            self.opcode.value = self.read(self.pc).value
+
+            self.set_flag('u', True)
+
             self.pc.value += 1
-            curr_inst = self.lookup.get(self.opcode.value)
 
-            self.cycles = curr_inst.cycles
+            # curr_inst = self.lookup.get(self.opcode.value)
+            curr_inst = instruction_by_opcode(opcode=self.opcode.value,
+                                              cpu=self)
+            self.cycles.value = curr_inst.cycles.value
 
-            add_cycle_1 = curr_inst.addr_mode()
+            add_cycle_1 = curr_inst.addr_mode(self)
             add_cycle_2 = curr_inst.operate()
-
             self.cycles.value += (add_cycle_1.value & add_cycle_2.value)
+
+            self.set_flag('u', True)
 
         self.cycles.value -= 1
 
@@ -105,57 +111,66 @@ class Cpu6502(Device):
 
         self.cycles.value = 8
 
+    def complete(self) -> bool:
+        return self.cycles.value == 0
+
     def disassemble(self, start, stop) -> Dict[int, str]:
-        space_amt = 12
+        spaces_amt = 7
+        ops_spaces_amt = 6
         map_lines = dict()
         addr = c_uint16(start)
         lo = c_uint8(0)
         hi = c_uint8(0)
-        line_addr = 0
 
         while addr.value <= stop:
             line_addr = addr.value
             # instruction addr
-            instr_str = ('$' + str(hex(addr.value))).ljust(space_amt)
+            instr_str = ('$' + hex(addr.value)[2:].zfill(4) + ':').ljust(spaces_amt)
             # instruction
             opcode = self.bus.get_ram().read(addr, True).value
             instruction = instruction_by_opcode(opcode)
             addr.value += 1
-            instr_str += instruction.name.ljust(space_amt)
+            instr_str += instruction.name.ljust(ops_spaces_amt)
             # addressing mode
             # TODO: okay, I decided write a lot of if/elifs, but sure, there exists more
             #  elegant way to do it (Strategy maybe?)
             if instruction.addr_mode == ams.am_imp:
-                instr_str += "{IMP}".ljust(space_amt)
+                instr_str += "{IMP}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_imm:
                 value = self.bus.get_ram().read(addr, True)
                 addr.value += 1
-                instr_str += ("#$" + hex(value.value)).ljust(space_amt) + "{IMM}".ljust(space_amt)
+                instr_str += ("#$" + hex(value.value)[2:].zfill(2)).ljust(
+                    ops_spaces_amt) + "{IMM}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_zp0:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
                 hi.value = 0x00
-                instr_str += ("$" + hex(lo.value) + ")").ljust(space_amt) + "{ZP0}".ljust(space_amt)
+                instr_str += ("$" + hex(lo.value)[2:].zfill(2) + ")").ljust(
+                    ops_spaces_amt) + "{ZP0}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_zpx:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
                 hi.value = 0x00
-                instr_str += ("$" + hex(lo.value) + ", X)").ljust(space_amt) + "{ZPX}".ljust(space_amt)
+                instr_str += ("$" + hex(lo.value)[2:].zfill(2) + ", X)").ljust(
+                    ops_spaces_amt) + "{ZPX}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_zpy:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
                 hi.value = 0x00
-                instr_str += ("$" + hex(lo.value) + ", Y)").ljust(space_amt) + "{ZPY}".ljust(space_amt)
+                instr_str += ("$" + hex(lo.value)[2:].zfill(2) + ", Y)").ljust(
+                    ops_spaces_amt) + "{ZPY}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_izx:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
                 hi.value = 0x00
-                instr_str += ("($" + hex(lo.value) + ", X)").ljust(space_amt) + "{IZX}".ljust(space_amt)
+                instr_str += ("($" + hex(lo.value)[2:].zfill(2) + ", X)").ljust(
+                    ops_spaces_amt) + "{IZX}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_izy:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
                 hi.value = 0x00
-                instr_str += ("($" + hex(lo.value) + ", Y)").ljust(space_amt) + "{IZY}".ljust(space_amt)
+                instr_str += ("($" + hex(lo.value)[2:].zfill(2) + ", Y)").ljust(
+                    ops_spaces_amt) + "{IZY}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_abs:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
@@ -163,7 +178,7 @@ class Cpu6502(Device):
                 addr.value += 1
                 instr_str += ("$" + hex(c_uint16(
                     (hi.value << 8) | lo.value
-                ).value)).ljust(space_amt) + "{ABS}".ljust(space_amt)
+                ).value)[2:].zfill(2)).ljust(ops_spaces_amt) + "{ABS}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_abx:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
@@ -171,7 +186,7 @@ class Cpu6502(Device):
                 addr.value += 1
                 instr_str += ("$" + hex(c_uint16(
                     (hi.value << 8) | lo.value
-                ).value)).ljust(space_amt) + ", X {ABX}".ljust(space_amt)
+                ).value)[2:].zfill(2)).ljust(ops_spaces_amt) + ", X {ABX}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_aby:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
@@ -179,7 +194,7 @@ class Cpu6502(Device):
                 addr.value += 1
                 instr_str += ("$" + hex(c_uint16(
                     (hi.value << 8) | lo.value
-                ).value)).ljust(space_amt) + ", X {ABY}".ljust(space_amt)
+                ).value)[2:].zfill(2)).ljust(ops_spaces_amt) + ", X {ABY}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_ind:
                 lo = self.bus.get_ram().read(addr, True)
                 addr.value += 1
@@ -187,12 +202,13 @@ class Cpu6502(Device):
                 addr.value += 1
                 instr_str += ("($" + hex(c_uint16(
                     (hi.value << 8) | lo.value
-                ).value) + ")").ljust(space_amt) + "{IND}".ljust(space_amt)
+                ).value)[2:].zfill(2) + ")").ljust(ops_spaces_amt) + "{IND}".ljust(ops_spaces_amt)
             elif instruction.addr_mode == ams.am_rel:
                 value = self.bus.get_ram().read(addr, True)
                 addr.value += 1
-                instr_str += ("$" + hex(value.value)).ljust(space_amt) + \
-                             ("[$" + hex(addr.value + value.value) + "]").ljust(space_amt) + "{REL}".ljust(space_amt)
+                instr_str += ("$" + hex(value.value)[2:].zfill(2)).ljust(ops_spaces_amt) + ("[$" + hex(
+                    addr.value + value.value
+                )[2:].zfill(2) + "]").ljust(ops_spaces_amt) + " {REL}".ljust(ops_spaces_amt)
             # add to res
             map_lines.update({line_addr: instr_str})
 
@@ -217,6 +233,6 @@ class Cpu6502(Device):
         self.bus.get_ram().write(addr, data)
 
     def fetch(self) -> c_uint8:
-        if self.lookup.get(self.opcode.value).addr_mode == ams.am_imp:
-            self.fetched = self.read(self.addr_abs)
+        if not self.lookup.get(self.opcode.value).addr_mode == ams.am_imp:
+            self.fetched.value = self.read(self.addr_abs).value
         return self.fetched
