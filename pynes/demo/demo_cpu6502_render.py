@@ -1,13 +1,13 @@
 import pathlib
-from ctypes import c_uint8, c_uint16
+from ctypes import c_uint8
+from enum import Enum
 from typing import List, Tuple
 
 import pygame as pg
-from enum import Enum
 
 from pynes.core.bus import Bus
 from pynes.core.cpu6502 import Cpu6502
-from pynes.core.cpu6502_utils import FLAGS, instructions_list_from_nes_io
+from pynes.core.cpu6502_utils import FLAGS
 from pynes.core.ram import Ram
 
 

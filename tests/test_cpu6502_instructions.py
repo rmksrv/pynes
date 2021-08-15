@@ -1,9 +1,8 @@
 import pytest
-from ctypes import c_uint8, c_uint16
 
+from pynes.core.bus import Bus
 from pynes.core.cpu6502 import Cpu6502
 from pynes.core.ram import Ram
-from pynes.core.bus import Bus
 
 
 @pytest.fixture()
