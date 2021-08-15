@@ -7,7 +7,7 @@ from enum import Enum
 
 from pynes.core.bus import Bus
 from pynes.core.cpu6502 import Cpu6502
-from pynes.core.cpu6502_utils import FLAGS
+from pynes.core.cpu6502_utils import FLAGS, instructions_list_from_nes_io
 from pynes.core.ram import Ram
 
 
@@ -16,11 +16,6 @@ def sample_6502_program() -> List[int]:
             0x01, 0x00, 0xac, 0x00, 0x00, 0xa9, 0x00, 0x18,
             0x6d, 0x01, 0x00, 0x88, 0xd0, 0xfa, 0x8d, 0x02,
             0x00, 0xea, 0xea, 0xea]
-
-
-def write_program_to_cpu(cpu: Cpu6502, program: List[int]) -> None:
-    for addr, opc in enumerate(program):
-        cpu.write(c_uint16(0x8000 + addr), c_uint8(opc))
 
 
 class Colors(Enum):
@@ -42,14 +37,22 @@ class DemoCpu6502Render:
         self.fps = DemoCpu6502Render.DEFAULT_FPS
 
         self.bus = self.get_prepared_bus()
-        write_program_to_cpu(self.bus.get_cpu6502(), sample_6502_program())
         self.bus.get_cpu6502().reset()
+        # nestest_rom = pathlib.Path(__file__).parent / '..' / '..' / 'tests' / 'nestest.nes'
+        # raw_rom = []
+        # with open(nestest_rom, 'rb') as nestest_io:
+        #     raw_rom = instructions_list_from_nes_io(nestest_io)
+        # self.bus.get_cpu6502().load_rom(raw_rom)
         self.bus.get_cpu6502().pc.value = 0x8000
 
     def setup(self, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT, fps: int = DEFAULT_FPS) -> None:
         self.width = width
         self.height = height
         self.fps = fps
+
+    def load_rom(self, rom: List[int] = None, start: int = 0x8000):
+        rom = rom or sample_6502_program()
+        self.bus.get_cpu6502().load_rom(rom, start)
 
     def run(self) -> None:
         # init

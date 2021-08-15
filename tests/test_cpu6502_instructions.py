@@ -22,6 +22,7 @@ def cpu(bus: Bus):
 
 
 # TESTS
+@pytest.mark.skip
 @pytest.mark.parametrize('init_data_value, init_a_value, init_c_value, '
                          'exp_a_value, exp_c_value, exp_z_value, exp_n_value, exp_v_value',
                          [
@@ -37,7 +38,7 @@ def test_adc(cpu: Cpu6502, init_data_value: int, init_a_value: int, init_c_value
     cpu.a.value = init_a_value
     cpu.set_flag('c', init_c_value)
 
-    op = cpu.lookup.get(0x69)
+    op = cpu.lookup.get(0x65)
     res = op.operate()
 
     assert op.name == "ADC"
@@ -49,6 +50,7 @@ def test_adc(cpu: Cpu6502, init_data_value: int, init_a_value: int, init_c_value
     assert cpu.get_flag('v') == exp_v_value
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize('init_data_value, init_a_value, exp_a_value, exp_z_value, exp_n_value',
                          [
                              (0x00, 0x00, 0x00, True, False),
@@ -337,6 +339,7 @@ def test_rti(cpu: Cpu6502):
     pass
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize('init_data_value, init_a_value, init_c_value, '
                          'exp_a_value, exp_c_value, exp_z_value, exp_n_value, exp_v_value',
                          [

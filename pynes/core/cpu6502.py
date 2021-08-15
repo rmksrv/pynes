@@ -1,5 +1,5 @@
 from ctypes import c_uint8, c_uint16
-from typing import Dict
+from typing import Dict, List
 
 import pynes.core.cpu6502_addr_modes as ams
 from pynes.core.cpu6502_instructions import opcode_instruction_mapping, instruction_by_opcode
@@ -236,3 +236,7 @@ class Cpu6502(Device):
         if not self.lookup.get(self.opcode.value).addr_mode == ams.am_imp:
             self.fetched.value = self.read(self.addr_abs).value
         return self.fetched
+
+    def load_rom(self, rom: List[int], start: int = 0x8000):
+        for addr, opc in enumerate(rom):
+            self.write(c_uint16(start + addr), c_uint8(opc))
