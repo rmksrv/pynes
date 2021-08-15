@@ -1,10 +1,10 @@
 from abc import ABC
 from typing import Optional
 
-from pynes.core.bus import Bus
+from pynes.core.devices.bus import Bus
 
 
-class Device(ABC):
+class AbstractDevice(ABC):
 
     def __init__(self):
         self.bus: Optional[Bus] = None

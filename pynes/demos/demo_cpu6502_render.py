@@ -5,10 +5,10 @@ from typing import List, Tuple
 
 import pygame as pg
 
-from pynes.core.bus import Bus
-from pynes.core.cpu6502 import Cpu6502
-from pynes.core.cpu6502_utils import FLAGS
-from pynes.core.ram import Ram
+from pynes.core.devices.bus import Bus
+from pynes.core.devices.cpu6502 import Cpu6502
+from pynes.core.devices.cpu6502.utils import FLAGS
+from pynes.core.devices.abstract_memory_device import AbstractMemoryDevice
 
 
 def sample_6502_program() -> List[int]:
@@ -204,5 +204,5 @@ class DemoCpu6502Render:
     def get_prepared_bus() -> Bus:
         bus = Bus()
         Cpu6502().connect_to_bus(bus)
-        Ram().connect_to_bus(bus)
+        AbstractMemoryDevice().connect_to_bus(bus)
         return bus

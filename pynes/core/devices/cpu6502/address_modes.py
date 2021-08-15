@@ -1,12 +1,10 @@
 from ctypes import c_uint8, c_uint16
 
-from pynes.core.device.fake_device import FakeDevice
-
 ADDR_MODE_EXIT_SUCCESS:        c_uint8 = c_uint8(0)
 ADDR_MODE_EXIT_ADD_CYCLE_NEED: c_uint8 = c_uint8(0)
 
 
-def am_imp(cpu: FakeDevice) -> c_uint8:
+def am_imp(cpu) -> c_uint8:
     """
     Implicit/Accumulator Addressing
     :param cpu:
@@ -16,7 +14,7 @@ def am_imp(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS
 
 
-def am_imm(cpu: FakeDevice) -> c_uint8:
+def am_imm(cpu) -> c_uint8:
     """
     Immediate Addressing
     :param cpu:
@@ -27,7 +25,7 @@ def am_imm(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS
 
 
-def am_zp0(cpu: FakeDevice) -> c_uint8:
+def am_zp0(cpu) -> c_uint8:
     """
     Zero Page Addressing
     :param cpu:
@@ -39,7 +37,7 @@ def am_zp0(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS
 
 
-def am_zpx(cpu: FakeDevice) -> c_uint8:
+def am_zpx(cpu) -> c_uint8:
     """
     Zero Page with X offset Addressing
     :param cpu:
@@ -51,7 +49,7 @@ def am_zpx(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS
 
 
-def am_zpy(cpu: FakeDevice) -> c_uint8:
+def am_zpy(cpu) -> c_uint8:
     """
     Zero Page with Y offset Addressing
     :param cpu:
@@ -63,7 +61,7 @@ def am_zpy(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS
 
 
-def am_abs(cpu: FakeDevice) -> c_uint8:
+def am_abs(cpu) -> c_uint8:
     """
     Absolute Addressing
     :param cpu:
@@ -79,7 +77,7 @@ def am_abs(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS
 
 
-def am_abx(cpu: FakeDevice) -> c_uint8:
+def am_abx(cpu) -> c_uint8:
     """
     Absolute with X offset Addressing
     :param cpu:
@@ -95,7 +93,7 @@ def am_abx(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS if (cpu.addr_abs.value & 0xFF00) == (hi.value << 8) else ADDR_MODE_EXIT_ADD_CYCLE_NEED
 
 
-def am_aby(cpu: FakeDevice) -> c_uint8:
+def am_aby(cpu) -> c_uint8:
     """
     Absolute with Y offset Addressing
     :param cpu:
@@ -111,7 +109,7 @@ def am_aby(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS if (cpu.addr_abs.value & 0xFF00) == (hi.value << 8) else ADDR_MODE_EXIT_ADD_CYCLE_NEED
 
 
-def am_ind(cpu: FakeDevice) -> c_uint8:
+def am_ind(cpu) -> c_uint8:
     """
     Indirect Addressing
     :param cpu:
@@ -133,7 +131,7 @@ def am_ind(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS
 
 
-def am_izx(cpu: FakeDevice) -> c_uint8:
+def am_izx(cpu) -> c_uint8:
     """
     Indirect X Addressing
     :param cpu:
@@ -154,7 +152,7 @@ def am_izx(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS
 
 
-def am_izy(cpu: FakeDevice) -> c_uint8:
+def am_izy(cpu) -> c_uint8:
     """
     Indirect Y Addressing
     :param cpu:
@@ -171,7 +169,7 @@ def am_izy(cpu: FakeDevice) -> c_uint8:
     return ADDR_MODE_EXIT_SUCCESS if (cpu.addr_abs.value & 0xFF00) == (hi.value << 8) else ADDR_MODE_EXIT_ADD_CYCLE_NEED
 
 
-def am_rel(cpu: FakeDevice) -> c_uint8:
+def am_rel(cpu) -> c_uint8:
     """
     Relative Addressing
     :param cpu:

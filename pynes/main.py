@@ -1,6 +1,6 @@
 import sys
 
-from pynes.demo.demo_cpu6502_render import DemoCpu6502Render
+from pynes.demos.demo_cpu6502_render import DemoCpu6502Render
 
 
 def main():

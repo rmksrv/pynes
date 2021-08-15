@@ -2,9 +2,8 @@ from abc import ABC, abstractmethod
 from ctypes import c_uint8, c_uint16
 from typing import Callable, Dict, Optional, List
 
-import pynes.core.cpu6502_addr_modes as ams
-from pynes.core.device.fake_device import FakeDevice
-from pynes.core.cpu6502_utils import get_mask
+import pynes.core.devices.cpu6502.address_modes as ams
+from pynes.core.devices.cpu6502.utils import get_mask
 
 
 # http://www.obelisk.me.uk/6502/reference.html was used as instructions reference
@@ -13,7 +12,7 @@ from pynes.core.cpu6502_utils import get_mask
 # instruction template
 class Cpu6502Instruction(ABC):
 
-    def __init__(self, cpu: Optional[FakeDevice], cycles: Optional[c_uint8],
+    def __init__(self, cpu, cycles: Optional[c_uint8],
                  addr_mode: Optional[Callable[[], c_uint8]]):
         self.cpu = cpu
         self.cycles = cycles
@@ -29,11 +28,11 @@ class Cpu6502Instruction(ABC):
 
     @staticmethod
     @abstractmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict:
+    def opcodes_mapping(cpu) -> Dict:
         pass
 
 
-def opcode_instruction_mapping(cpu: Optional[FakeDevice]) -> Dict[int, Cpu6502Instruction]:
+def opcode_instruction_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
     mapping = dict()
 
     for instr_cls in Cpu6502Instruction.__subclasses__():
@@ -66,7 +65,7 @@ class ADC(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x69: ADC(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0x65: ADC(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -93,7 +92,7 @@ class AND(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x29: AND(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0x25: AND(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -131,7 +130,7 @@ class ASL(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x0a: ASL(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp),
             0x06: ASL(cpu, cycles=c_uint8(5), addr_mode=ams.am_zp0),
@@ -159,7 +158,7 @@ class BCC(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x90: BCC(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
@@ -183,7 +182,7 @@ class BCS(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xb0: BCS(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
@@ -208,7 +207,7 @@ class BEQ(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xf0: BEQ(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
@@ -233,7 +232,7 @@ class BIT(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x24: BIT(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
             0x2c: BIT(cpu, cycles=c_uint8(4), addr_mode=ams.am_abs),
@@ -259,7 +258,7 @@ class BMI(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x30: BMI(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
@@ -284,7 +283,7 @@ class BNE(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xd0: BNE(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
@@ -309,7 +308,7 @@ class BPL(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x10: BPL(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
@@ -344,7 +343,7 @@ class BRK(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x00: BRK(cpu, cycles=c_uint8(7), addr_mode=ams.am_imp)
         }
@@ -369,7 +368,7 @@ class BVC(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x50: BVC(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
@@ -394,7 +393,7 @@ class BVS(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x70: BVS(cpu, cycles=c_uint8(2), addr_mode=ams.am_rel)
         }
@@ -410,7 +409,7 @@ class CLC(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x18: CLC(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -426,7 +425,7 @@ class CLD(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xd8: CLD(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -443,7 +442,7 @@ class CLI(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x58: CLI(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -459,7 +458,7 @@ class CLV(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xb8: CLV(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -482,7 +481,7 @@ class CMP(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xc9: CMP(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0xc5: CMP(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -512,7 +511,7 @@ class CPX(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xe0: CPX(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0xe4: CPX(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -537,7 +536,7 @@ class CPY(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xc0: CPY(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0xc4: CPY(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -562,7 +561,7 @@ class DEC(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xc6: DEC(cpu, cycles=c_uint8(5), addr_mode=ams.am_zp0),
             0xd6: DEC(cpu, cycles=c_uint8(6), addr_mode=ams.am_zpx),
@@ -584,7 +583,7 @@ class DEX(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xca: DEX(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -603,7 +602,7 @@ class DEY(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x88: DEY(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -624,7 +623,7 @@ class EOR(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x49: EOR(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0x45: EOR(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -653,7 +652,7 @@ class INC(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xe6: INC(cpu, cycles=c_uint8(5), addr_mode=ams.am_zp0),
             0xf6: INC(cpu, cycles=c_uint8(6), addr_mode=ams.am_zpx),
@@ -675,7 +674,7 @@ class INX(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xe8: INX(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -694,7 +693,7 @@ class INY(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xc8: INY(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -716,7 +715,7 @@ class JMP(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x4c: JMP(cpu, cycles=c_uint8(3), addr_mode=ams.am_abs),
             0x6c: JMP(cpu, cycles=c_uint8(5), addr_mode=ams.am_ind),
@@ -743,7 +742,7 @@ class JSR(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x20: JSR(cpu, cycles=c_uint8(6), addr_mode=ams.am_abs),
         }
@@ -762,7 +761,7 @@ class LDA(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xa9: LDA(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0xa5: LDA(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -790,7 +789,7 @@ class LDX(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xa2: LDX(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0xa6: LDX(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -813,7 +812,7 @@ class LDY(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xa0: LDY(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0xa4: LDY(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -845,7 +844,7 @@ class LSR(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x4a: LSR(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0x46: LSR(cpu, cycles=c_uint8(5), addr_mode=ams.am_zp0),
@@ -865,7 +864,7 @@ class NOP(Cpu6502Instruction):
         return c_uint8(1) if self.cpu.opcode.value in NOP.illegal_opcodes() else c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xea: NOP(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -889,7 +888,7 @@ class ORA(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x09: ORA(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0x05: ORA(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -913,7 +912,7 @@ class PHA(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x48: PHA(cpu, cycles=c_uint8(3), addr_mode=ams.am_imp)
         }
@@ -933,7 +932,7 @@ class PHP(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x08: PHP(cpu, cycles=c_uint8(3), addr_mode=ams.am_imp)
         }
@@ -953,7 +952,7 @@ class PLA(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x68: PLA(cpu, cycles=c_uint8(4), addr_mode=ams.am_imp)
         }
@@ -972,7 +971,7 @@ class PLP(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x28: PLP(cpu, cycles=c_uint8(4), addr_mode=ams.am_imp)
         }
@@ -1002,7 +1001,7 @@ class ROL(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x2a: ROL(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0x26: ROL(cpu, cycles=c_uint8(5), addr_mode=ams.am_zp0),
@@ -1036,7 +1035,7 @@ class ROR(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x6a: ROR(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0x66: ROR(cpu, cycles=c_uint8(5), addr_mode=ams.am_zp0),
@@ -1065,7 +1064,7 @@ class RTI(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x40: RTI(cpu, cycles=c_uint8(6), addr_mode=ams.am_imp)
         }
@@ -1087,7 +1086,7 @@ class RTS(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x60: RTS(cpu, cycles=c_uint8(6), addr_mode=ams.am_imp)
         }
@@ -1114,7 +1113,7 @@ class SBC(Cpu6502Instruction):
         return c_uint8(1)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xe9: SBC(cpu, cycles=c_uint8(2), addr_mode=ams.am_imm),
             0xe5: SBC(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
@@ -1138,7 +1137,7 @@ class SEC(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x38: SEC(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1154,7 +1153,7 @@ class SED(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xf8: SED(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1170,7 +1169,7 @@ class SEI(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x78: SEI(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1186,7 +1185,7 @@ class STA(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x85: STA(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
             0x95: STA(cpu, cycles=c_uint8(4), addr_mode=ams.am_zpx),
@@ -1208,7 +1207,7 @@ class STX(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x86: STX(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
             0x96: STX(cpu, cycles=c_uint8(4), addr_mode=ams.am_zpy),
@@ -1226,7 +1225,7 @@ class STY(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x84: STY(cpu, cycles=c_uint8(3), addr_mode=ams.am_zp0),
             0x94: STY(cpu, cycles=c_uint8(4), addr_mode=ams.am_zpx),
@@ -1247,7 +1246,7 @@ class TAX(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xaa: TAX(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1266,7 +1265,7 @@ class TAY(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xa8: TAY(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1286,7 +1285,7 @@ class TSX(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0xba: TSX(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1305,7 +1304,7 @@ class TXA(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x8a: TXA(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1322,7 +1321,7 @@ class TXS(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x9a: TXS(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1341,7 +1340,7 @@ class TYA(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {
             0x98: TYA(cpu, cycles=c_uint8(2), addr_mode=ams.am_imp)
         }
@@ -1356,10 +1355,9 @@ class XXX(Cpu6502Instruction):
         return c_uint8(0)
 
     @staticmethod
-    def opcodes_mapping(cpu: FakeDevice) -> Dict[int, Cpu6502Instruction]:
+    def opcodes_mapping(cpu) -> Dict[int, Cpu6502Instruction]:
         return {}
 
 
-def instruction_by_opcode(opcode: int,
-                          cpu: Optional[FakeDevice] = None) -> Cpu6502Instruction:
+def instruction_by_opcode(opcode: int, cpu = None) -> Cpu6502Instruction:
     return opcode_instruction_mapping(cpu).get(opcode, XXX(cpu, cycles=c_uint8(0), addr_mode=ams.am_imp))
