@@ -1359,5 +1359,5 @@ class XXX(Cpu6502Instruction):
         return {}
 
 
-def instruction_by_opcode(opcode: int, cpu = None) -> Cpu6502Instruction:
+def instruction_by_opcode(opcode: int, cpu=None) -> Cpu6502Instruction:
     return opcode_instruction_mapping(cpu).get(opcode, XXX(cpu, cycles=c_uint8(0), addr_mode=ams.am_imp))
