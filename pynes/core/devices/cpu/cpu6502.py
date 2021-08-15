@@ -1,11 +1,11 @@
 from ctypes import c_uint8, c_uint16
 from typing import Dict, List
 
-import pynes.core.devices.cpu6502.address_modes as ams
-from pynes.core.devices.cpu6502.instructions import opcode_instruction_mapping, instruction_by_opcode
-from pynes.core.devices.cpu6502.utils import get_mask
-from pynes.core.devices.abstract_device import AbstractDevice
 from pynes.core.exceptions import NotConnectedToBusException
+from pynes.core.devices import AbstractDevice
+from pynes.core.devices.cpu import address_modes as ams
+from pynes.core.devices.cpu.utils import get_mask
+from pynes.core.devices.cpu.instructions import opcode_instruction_mapping, instruction_by_opcode
 
 
 class Cpu6502(AbstractDevice):

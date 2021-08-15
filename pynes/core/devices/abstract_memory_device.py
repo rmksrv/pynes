@@ -1,6 +1,6 @@
 from ctypes import c_uint8, c_uint16
 
-from pynes.core.devices.abstract_device import AbstractDevice
+from pynes.core.devices import AbstractDevice
 
 
 class AbstractMemoryDevice(AbstractDevice):

@@ -1,8 +1,6 @@
 import pytest
 
-from pynes.core.devices.bus import Bus
-from pynes.core.devices.cpu6502 import Cpu6502
-from pynes.core.devices.abstract_memory_device import AbstractMemoryDevice
+from pynes.core.devices import Bus, Cpu6502, AbstractMemoryDevice
 
 
 @pytest.fixture()

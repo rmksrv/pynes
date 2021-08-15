@@ -6,8 +6,8 @@ from typing import List, Tuple
 import pygame as pg
 
 from pynes.core.devices.bus import Bus
-from pynes.core.devices.cpu6502 import Cpu6502
-from pynes.core.devices.cpu6502.utils import FLAGS
+from pynes.core.devices.cpu.cpu6502 import Cpu6502
+from pynes.core.devices.cpu.utils import FLAGS
 from pynes.core.devices.abstract_memory_device import AbstractMemoryDevice
 
 
