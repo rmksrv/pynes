@@ -1,7 +1,7 @@
 from ctypes import c_uint8, c_uint16
 from typing import Dict, List
 
-from pynes.core.exceptions import NotConnectedToBusException
+from pynes.core.exceptions import NoSuchDeviceException
 from pynes.core.devices import AbstractDevice
 from pynes.core.devices.cpu import address_modes as ams
 from pynes.core.devices.cpu.utils import get_mask
@@ -224,13 +224,14 @@ class Cpu6502(AbstractDevice):
 
     def read(self, addr: c_uint16) -> c_uint8:
         if not self.bus:
-            raise NotConnectedToBusException()
-        return self.bus.get_ram().read(addr, False)
+            raise NoSuchDeviceException()
+        # return self.bus.get_ram().read(addr, False)
+        return self.bus.address_owner(addr).read(addr, False)
 
     def write(self, addr: c_uint16, data: c_uint8) -> None:
         if not self.bus:
-            raise NotConnectedToBusException()
-        self.bus.get_ram().write(addr, data)
+            raise NoSuchDeviceException()
+        self.bus.address_owner(addr).write(addr, data)
 
     def fetch(self) -> c_uint8:
         if not self.lookup.get(self.opcode.value).addr_mode == ams.am_imp:
@@ -240,3 +241,4 @@ class Cpu6502(AbstractDevice):
     def load_rom(self, rom: List[int], start: int = 0x8000):
         for addr, opc in enumerate(rom):
             self.write(c_uint16(start + addr), c_uint8(opc))
+        print()
