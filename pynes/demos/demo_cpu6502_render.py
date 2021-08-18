@@ -1,14 +1,12 @@
 import pathlib
-from ctypes import c_uint8
+from ctypes import c_uint16
 from enum import Enum
 from typing import List, Tuple
 
 import pygame as pg
 
-from pynes.core.devices.bus import Bus
-from pynes.core.devices.cpu.cpu6502 import Cpu6502
+from pynes.core.devices import Bus, Cpu6502, Ppu2C02, Ram, Cartridge
 from pynes.core.devices.cpu.utils import FLAGS
-from pynes.core.devices.abstract_memory_device import AbstractMemoryDevice
 
 
 def sample_6502_program() -> List[int]:
@@ -109,30 +107,33 @@ class DemoCpu6502Render:
         return running
 
     def render_memory(self, screen: pg.display, font: pg.font.Font) -> None:
-        memory_dump = self.bus.get_ram().data
 
-        def memory_page_strs(mem: List[c_uint8], page_num: int) -> List[str]:
-            page = list()
-            lo = page_num * 0x100
-            hi = page_num * 0x100 + 0x101
-            viewing_mem = mem[lo:hi]
-            line = '$' + hex(lo)[2:].zfill(4) + ': '
-            for i, cell in enumerate(viewing_mem):
-                if i % 0x10 == 0 and i != 0:
-                    page.append(line)
-                    line = '$' + hex(page_num)[2:].zfill(2) + hex(i)[2:].zfill(2) + ': '
-                line += hex(cell.value)[2:].zfill(2) + ' '
-            return page
+        def render_memory_page(_page_num: int, _pos: Tuple[int, int]) -> None:
+            _lo = _page_num * 0x100
+            _hi = (_page_num + 1) * 0x100
+            _step = 0x10
+            for _i, _addr_row in enumerate(range(_lo, _hi, _step)):
+                line = '$' + hex(_addr_row)[2:].zfill(4) + ': '
+                if self.bus.get_cpu6502().pc.value in range(_addr_row, _addr_row + _step):
+                    color = Colors.BLUE.value
+                else:
+                    color = Colors.WHITE.value
+                addr_label = font.render(line, False, color)
+                screen.blit(addr_label, (_pos[0], _pos[1] + _i * 15))
 
-        def render_memory_page(page: List[str], pos: Tuple[int, int]) -> None:
-            for i, line in enumerate(page):
-                line_label = font.render(line, False, Colors.WHITE.value)
-                screen.blit(line_label, (pos[0], pos[1] + i * 15))
+                for _j, _addr in enumerate(range(_addr_row, _addr_row + _step)):
+                    cell = self.bus.get_cpu6502().read(c_uint16(_addr))
+                    cell_text = hex(cell.value)[2:].zfill(2) + ' '
+                    # TODO: now only first uint16 is highlighting with no args -- fix it (when refactor addr modes)
+                    color = Colors.BLUE.value if _addr == self.bus.get_cpu6502().pc.value else Colors.WHITE.value
+                    cell_label = font.render(cell_text, False, color)
+                    _x = _pos[0] + 50 + 25 * (_j + 1)
+                    _y = _pos[1] + _i * 15
+                    screen.blit(cell_label, (_x, _y))
 
-        zero_page = memory_page_strs(memory_dump, 0)
-        additional_page = memory_page_strs(memory_dump, 0x80)
-        render_memory_page(zero_page, (10, 10))
-        render_memory_page(additional_page, (10, 270))
+        add_page_num = (self.bus.get_cpu6502().pc.value & 0xff00) >> 8
+        for i, page_num in enumerate([0, add_page_num]):
+            render_memory_page(page_num, (10, 10 + i * 260))
 
     def render_disassembled_code(self, screen: pg.display, font: pg.font.Font) -> None:
         pc = self.bus.get_cpu6502().pc.value
@@ -204,5 +205,7 @@ class DemoCpu6502Render:
     def get_prepared_bus() -> Bus:
         bus = Bus()
         Cpu6502().connect_to_bus(bus)
-        AbstractMemoryDevice().connect_to_bus(bus)
+        Ppu2C02().connect_to_bus(bus)
+        Ram().connect_to_bus(bus)
+        Cartridge().connect_to_bus(bus)
         return bus

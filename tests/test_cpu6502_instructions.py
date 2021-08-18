@@ -1,15 +1,15 @@
 import pytest
 
-from pynes.core.devices import Bus, Cpu6502, AbstractMemoryDevice
+from pynes.core.devices import Bus, Cpu6502, Ram, Ppu2C02, Cartridge
 
 
 @pytest.fixture()
 def bus():
-    cpu = Cpu6502()
-    ram = AbstractMemoryDevice()
     bus = Bus()
-    cpu.connect_to_bus(bus)
-    ram.connect_to_bus(bus)
+    Cpu6502().connect_to_bus(bus)
+    Ppu2C02().connect_to_bus(bus)
+    Ram().connect_to_bus(bus)
+    Cartridge().connect_to_bus(bus)
     yield bus
 
 

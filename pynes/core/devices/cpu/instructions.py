@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from ctypes import c_uint8, c_uint16
-from typing import Callable, Dict, Optional, List
+from typing import Callable, Dict, Optional, List, Any
 
 import pynes.core.devices.cpu.address_modes as address_modes
 from pynes.core.devices.cpu.utils import get_mask
@@ -13,7 +13,7 @@ from pynes.core.devices.cpu.utils import get_mask
 class Cpu6502Instruction(ABC):
 
     def __init__(self, cpu, cycles: Optional[c_uint8],
-                 addr_mode: Optional[Callable[[], c_uint8]]):
+                 addr_mode: Optional[Callable[[Any], c_uint8]]):
         self.cpu = cpu
         self.cycles = cycles
         self.addr_mode = addr_mode
