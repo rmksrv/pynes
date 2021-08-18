@@ -33,6 +33,13 @@ class Bus:
             raise NoSuchDeviceException(device_name)
         return cpu
 
+    def get_ppu2C02(self):
+        device_name = 'Ppu2C02'
+        ppu = self.devices.get(device_name)
+        if not ppu:
+            raise NoSuchDeviceException(device_name)
+        return ppu
+
     def address_owner(self, address: c_uint16) -> AbstractMemoryDevice:
         memory_devices = filter(lambda d: d.__class__ in AbstractMemoryDevice.__subclasses__(), self.devices.values())
         for device_instance in memory_devices:

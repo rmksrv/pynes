@@ -208,4 +208,5 @@ class DemoCpu6502Render:
         Ppu2C02().connect_to_bus(bus)
         Ram().connect_to_bus(bus)
         Cartridge().connect_to_bus(bus)
+        bus.get_cartridge().connect_to_bus(bus.get_ppu2C02().internal_bus)
         return bus
