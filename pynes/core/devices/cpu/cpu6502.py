@@ -58,7 +58,6 @@ class Cpu6502(AbstractDevice):
 
             self.pc.value += 1
 
-            # curr_inst = self.lookup.get(self.opcode.value)
             curr_inst = instruction_by_opcode(opcode=self.opcode.value,
                                               cpu=self)
             self.cycles.value = curr_inst.cycles.value
@@ -127,7 +126,7 @@ class Cpu6502(AbstractDevice):
             # instruction addr
             instr_str = ('$' + hex(addr.value)[2:].zfill(4) + ':').ljust(spaces_amt)
             # instruction
-            opcode = self.bus.get_ram().read(addr, True).value
+            opcode = self.bus.address_owner(addr).read(addr, True).value
             instruction = instruction_by_opcode(opcode)
             addr.value += 1
             instr_str += instruction.name.ljust(ops_spaces_amt)

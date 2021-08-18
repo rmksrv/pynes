@@ -1,5 +1,5 @@
 import pathlib
-from ctypes import c_uint8, c_uint16
+from ctypes import c_uint16
 from enum import Enum
 from typing import List, Tuple
 
@@ -108,28 +108,32 @@ class DemoCpu6502Render:
 
     def render_memory(self, screen: pg.display, font: pg.font.Font) -> None:
 
-        def memory_page_strs(page_num: int) -> List[str]:
-            page = list()
-            lo = page_num * 0x100
-            hi = page_num * 0x100 + 0x101
-            line = '$' + hex(lo)[2:].zfill(4) + ': '
-            for i in range(lo, hi):
-                cell = self.bus.address_owner(c_uint16(i)).data[i]
-                if i % 0x10 == 0 and i != 0:
-                    page.append(line)
-                    line = '$' + hex(page_num)[2:].zfill(2) + hex(i)[2:].zfill(2) + ': '
-                line += hex(cell.value)[2:].zfill(2) + ' '
-            return page
+        def render_memory_page(_page_num: int, _pos: Tuple[int, int]) -> None:
+            _lo = _page_num * 0x100
+            _hi = (_page_num + 1) * 0x100
+            _step = 0x10
+            for _i, _addr_row in enumerate(range(_lo, _hi, _step)):
+                line = '$' + hex(_addr_row)[2:].zfill(4) + ': '
+                if self.bus.get_cpu6502().pc.value in range(_addr_row, _addr_row + _step):
+                    color = Colors.BLUE.value
+                else:
+                    color = Colors.WHITE.value
+                addr_label = font.render(line, False, color)
+                screen.blit(addr_label, (_pos[0], _pos[1] + _i * 15))
 
-        def render_memory_page(page: List[str], pos: Tuple[int, int]) -> None:
-            for i, line in enumerate(page):
-                line_label = font.render(line, False, Colors.WHITE.value)
-                screen.blit(line_label, (pos[0], pos[1] + i * 15))
+                for _j, _addr in enumerate(range(_addr_row, _addr_row + _step)):
+                    cell = self.bus.get_cpu6502().read(c_uint16(_addr))
+                    cell_text = hex(cell.value)[2:].zfill(2) + ' '
+                    # TODO: now only first uint16 is highlighting with no args -- fix it (when refactor addr modes)
+                    color = Colors.BLUE.value if _addr == self.bus.get_cpu6502().pc.value else Colors.WHITE.value
+                    cell_label = font.render(cell_text, False, color)
+                    _x = _pos[0] + 50 + 25 * (_j + 1)
+                    _y = _pos[1] + _i * 15
+                    screen.blit(cell_label, (_x, _y))
 
-        zero_page = memory_page_strs(0)
-        additional_page = memory_page_strs(0x80)
-        render_memory_page(zero_page, (10, 10))
-        render_memory_page(additional_page, (10, 270))
+        add_page_num = (self.bus.get_cpu6502().pc.value & 0xff00) >> 8
+        for i, page_num in enumerate([0, add_page_num]):
+            render_memory_page(page_num, (10, 10 + i * 260))
 
     def render_disassembled_code(self, screen: pg.display, font: pg.font.Font) -> None:
         pc = self.bus.get_cpu6502().pc.value
