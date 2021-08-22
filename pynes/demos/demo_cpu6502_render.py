@@ -1,19 +1,13 @@
+import os
 import pathlib
 from ctypes import c_uint16
 from enum import Enum
-from typing import List, Tuple
+from typing import Tuple, Union
 
 import pygame as pg
 
-from pynes.core.devices import Bus, Cpu6502, Ppu2C02, Ram, Cartridge
+from pynes.core.devices import Bus, Cpu6502, Ppu2C02, Ram, Cartridge, Apu
 from pynes.core.devices.cpu.utils import FLAGS
-
-
-def sample_6502_program() -> List[int]:
-    return [0xa2, 0x0a, 0x8e, 0x00, 0x00, 0xa2, 0x03, 0x8e,
-            0x01, 0x00, 0xac, 0x00, 0x00, 0xa9, 0x00, 0x18,
-            0x6d, 0x01, 0x00, 0x88, 0xd0, 0xfa, 0x8d, 0x02,
-            0x00, 0xea, 0xea, 0xea]
 
 
 class Colors(Enum):
@@ -36,21 +30,15 @@ class DemoCpu6502Render:
 
         self.bus = self.get_prepared_bus()
         self.bus.get_cpu6502().reset()
-        # nestest_rom = pathlib.Path(__file__).parent / '..' / '..' / 'tests' / 'nestest.nes'
-        # raw_rom = []
-        # with open(nestest_rom, 'rb') as nestest_io:
-        #     raw_rom = instructions_list_from_nes_io(nestest_io)
-        # self.bus.get_cpu6502().load_rom(raw_rom)
-        self.bus.get_cpu6502().pc.value = 0x8000
+        self.bus.get_cpu6502().pc.value = Cartridge.min_address
 
     def setup(self, width: int = DEFAULT_WIDTH, height: int = DEFAULT_HEIGHT, fps: int = DEFAULT_FPS) -> None:
         self.width = width
         self.height = height
         self.fps = fps
 
-    def load_rom(self, rom: List[int] = None, start: int = 0x8000):
-        rom = rom or sample_6502_program()
-        self.bus.get_cpu6502().load_rom(rom, start)
+    def load_rom(self, rom: Union[str, bytes, os.PathLike], start: int = Cartridge.min_address) -> None:
+        self.bus.get_cartridge().load_rom(rom, start)
 
     def run(self) -> None:
         # init
@@ -62,7 +50,7 @@ class DemoCpu6502Render:
         font = pg.font.Font(pathlib.Path(__file__).parent / '..' / 'resources' / 'fonts' / 'joystix_monospace.ttf', 10)
 
         # main
-        while self.event_bypass():
+        while self.event_iter():
             # some control stuff
             clock.tick(self.fps)
 
@@ -80,12 +68,11 @@ class DemoCpu6502Render:
 
             # upd screen
             pg.display.flip()
-            # pg.display.update()
 
         pg.font.quit()
         pg.quit()
 
-    def event_bypass(self) -> bool:
+    def event_iter(self) -> bool:
         running = True
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -97,7 +84,7 @@ class DemoCpu6502Render:
                         self.bus.get_cpu6502().clock()
                 elif event.key == pg.K_r:
                     self.bus.get_cpu6502().reset()
-                    self.bus.get_cpu6502().pc.value = 0x8000
+                    self.bus.get_cpu6502().pc.value = Cartridge.min_address
                 elif event.key == pg.K_i:
                     self.bus.get_cpu6502().irq()
                 elif event.key == pg.K_n:
@@ -208,5 +195,6 @@ class DemoCpu6502Render:
         Ppu2C02().connect_to_bus(bus)
         Ram().connect_to_bus(bus)
         Cartridge().connect_to_bus(bus)
+        Apu().connect_to_bus(bus)
         bus.get_cartridge().connect_to_bus(bus.get_ppu2C02().internal_bus)
         return bus
